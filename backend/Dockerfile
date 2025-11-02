@@ -4,11 +4,14 @@ FROM node:20-alpine
 # Diretório de trabalho
 WORKDIR /app
 
+# Instalar bash e git (necessário para algumas dependências npm)
+RUN apk add --no-cache bash git
+
 # Copiar arquivos de dependências
 COPY package*.json ./
 
 # Instalar todas as dependências
-RUN npm ci
+RUN npm install
 
 # Copiar código fonte
 COPY . .

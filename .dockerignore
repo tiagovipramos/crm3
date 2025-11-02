@@ -50,6 +50,7 @@ coverage/
 .nyc_output/
 
 # Backend específico
+backend/
 backend/uploads/
 backend/auth_*/
 backend/dist/
