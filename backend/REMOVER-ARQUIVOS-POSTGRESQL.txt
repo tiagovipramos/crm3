@@ -1,0 +1,12 @@
+ARQUIVOS POSTGRESQL PARA DELETAR:
+
+1. backend/migrations/schema.sql
+2. backend/migrations/schema-indicadores.sql
+3. backend/src/config/db-helper.ts
+
+EXECUTE MANUALMENTE:
+del backend\migrations\schema.sql
+del backend\migrations\schema-indicadores.sql
+del backend\src\config\db-helper.ts
+
+Após deletar, os imports serão atualizados automaticamente.
