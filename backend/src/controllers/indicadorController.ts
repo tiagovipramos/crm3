@@ -546,7 +546,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       // Usar o ID do lead recém-criado (insertId do resultado do INSERT)
       const leadId = leadResult.insertId;
 
-      if (leadId) {
+      if (leadResult.affectedRows > 0 && leadId) {
         await pool.query(
           'UPDATE indicacoes SET lead_id = ?, status = ? WHERE id = ?',
           [leadId, 'enviado_crm', indicacao.id]
