@@ -134,7 +134,7 @@ class WhatsAppService {
               // Atualizar status no banco
               const [rows] = await pool.query(
                 'UPDATE consultores SET status_conexao = ? WHERE id = ?',
-                ['reconnecting', consultorId]
+                ['connecting', consultorId]
               );
               
               // Emitir evento de reconexão
