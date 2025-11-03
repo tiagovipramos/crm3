@@ -354,6 +354,42 @@ export const updateLead = async (req: Request, res: Response) => {
             
             console.log('✅ Venda revertida com sucesso! R$ 15,00 removidos');
             
+          } else if (indicacao.status === 'respondeu' && novoStatus === 'novo') {
+            console.log('🔄 Revertendo liberação dos R$ 2,00 - Bloqueando novamente');
+            
+            // Bloquear saldo novamente
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel - 2.00,
+                   saldo_bloqueado = saldo_bloqueado + 2.00,
+                   indicacoes_respondidas = GREATEST(indicacoes_respondidas - 1, 0)
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'enviado_crm',
+                   comissao_resposta = 0,
+                   data_resposta = NULL
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'bloqueio', 2.00, saldo_disponivel + 2.00, saldo_disponivel,
+                'Reversão de resposta - Saldo bloqueado novamente'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ R$ 2,00 bloqueados novamente!');
+            
           } else if (novoStatus === 'perdido' && indicacao.status === 'enviado_crm') {
             console.log('❌ Movendo R$ 2,00 para saldo perdido');
             
