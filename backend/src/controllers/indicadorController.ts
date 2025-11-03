@@ -543,16 +543,13 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
         [nomeIndicado, validacao.telefone, consultorId, indicadorId]
       );
 
-      // Atualizar indicação com lead_id e status
-      const [leadRows] = await pool.query<RowDataPacket[]>(
-        'SELECT id FROM leads WHERE indicacao_id = ? ORDER BY data_criacao DESC LIMIT 1',
-        [indicacao.id]
-      );
+      // Usar o ID do lead recém-criado (insertId do resultado do INSERT)
+      const leadId = leadResult.insertId;
 
-      if (leadRows.length > 0) {
+      if (leadId) {
         await pool.query(
           'UPDATE indicacoes SET lead_id = ?, status = ? WHERE id = ?',
-          [leadRows[0].id, 'enviado_crm', indicacao.id]
+          [leadId, 'enviado_crm', indicacao.id]
         );
         
         // 🔥 Emitir evento Socket.IO para o consultor sobre o novo lead
@@ -560,7 +557,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
         if (io) {
           console.log(`📡 Emitindo evento 'novo_lead' para consultor ${consultorId}`);
           io.to(`consultor_${consultorId}`).emit('novo_lead', {
-            leadId: leadRows[0].id,
+            leadId: leadId,
             nome: nomeIndicado,
             telefone: validacao.telefone,
             origem: 'Indicação',
@@ -588,14 +585,14 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
             const mensagemBoasVindas = `Olá, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
 
             console.log(`📤 Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
-            console.log(`🆔 Lead ID para associar a mensagem: ${leadRows[0].id}`);
+            console.log(`🆔 Lead ID para associar a mensagem: ${leadId}`);
             
             // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
             await whatsappService.enviarMensagem(
               consultorId,
               validacao.telefone,
               mensagemBoasVindas,
-              leadRows[0].id // ✅ Passar lead_id específico
+              String(leadId) // ✅ Converter para string
             );
 
             console.log('✅ Mensagem de boas-vindas enviada com sucesso!');
