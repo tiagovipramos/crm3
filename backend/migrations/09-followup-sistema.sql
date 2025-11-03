@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS followup_mensagens (
 -- Tabela de Leads em Follow-up
 CREATE TABLE IF NOT EXISTS followup_leads (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  lead_id VARCHAR(36) NOT NULL,
+  lead_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   sequencia_id INT NOT NULL,
   status ENUM('ativo', 'pausado', 'concluido', 'cancelado') DEFAULT 'ativo',
   mensagem_atual INT DEFAULT 1,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS followup_leads (
   UNIQUE KEY uk_lead_sequencia (lead_id, sequencia_id),
   INDEX idx_status (status),
   INDEX idx_proxima_mensagem (data_proxima_mensagem)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Histórico de Envios
 CREATE TABLE IF NOT EXISTS followup_envios (
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS followup_envios (
   FOREIGN KEY (mensagem_id) REFERENCES followup_mensagens(id) ON DELETE CASCADE,
   INDEX idx_followup_lead (followup_lead_id),
   INDEX idx_enviado_em (enviado_em)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- VIEW: Estatísticas das Sequências
 CREATE OR REPLACE VIEW v_followup_estatisticas AS
