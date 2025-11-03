@@ -98,9 +98,9 @@ export interface Tarefa {
   leadId?: string;
   titulo: string;
   descricao?: string;
-  tipo: 'retornar_contato' | 'enviar_proposta' | 'acompanhar_vistoria' | 'follow_up' | 'outro';
-  dataLembrete: string;
-  concluida: boolean;
+  dataVencimento: string; // Alinhado com data_vencimento do banco
+  prioridade?: 'baixa' | 'media' | 'alta';
+  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
   dataCriacao: string;
   dataConclusao?: string;
 }

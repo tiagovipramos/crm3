@@ -51,7 +51,7 @@ export default function TarefasView() {
   amanha.setDate(amanha.getDate() + 1);
 
   const tarefasFiltradas = tarefasPendentes.filter(tarefa => {
-    const { ano, mes, dia } = parseDataMySQL(tarefa.dataLembrete);
+    const { ano, mes, dia } = parseDataMySQL(tarefa.dataVencimento);
     const dataTarefa = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
 
     switch (filtro) {
@@ -108,19 +108,19 @@ export default function TarefasView() {
 
   // Estatísticas
   const tarefasHoje = tarefasPendentes.filter(t => {
-    const { ano, mes, dia } = parseDataMySQL(t.dataLembrete);
+    const { ano, mes, dia } = parseDataMySQL(t.dataVencimento);
     const dataTarefa = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
     return dataTarefa.getTime() === hoje.getTime();
   }).length;
 
   const tarefasAtrasadas = tarefasPendentes.filter(t => {
-    const { ano, mes, dia } = parseDataMySQL(t.dataLembrete);
+    const { ano, mes, dia } = parseDataMySQL(t.dataVencimento);
     const dataTarefa = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
     return dataTarefa.getTime() < hoje.getTime();
   }).length;
 
   const tarefasProximas = tarefasPendentes.filter(t => {
-    const { ano, mes, dia } = parseDataMySQL(t.dataLembrete);
+    const { ano, mes, dia } = parseDataMySQL(t.dataVencimento);
     const dataTarefa = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
     return dataTarefa.getTime() >= amanha.getTime();
   }).length;
@@ -219,7 +219,7 @@ export default function TarefasView() {
         ) : (
           <div className="space-y-4">
             {tarefasFiltradas.map((tarefa) => {
-              const { ano, mes, dia } = parseDataMySQL(tarefa.dataLembrete);
+              const { ano, mes, dia } = parseDataMySQL(tarefa.dataVencimento);
               const dataTarefa = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
               const isAtrasada = dataTarefa.getTime() < hoje.getTime();
               const isHoje = dataTarefa.getTime() === hoje.getTime();
@@ -260,7 +260,7 @@ export default function TarefasView() {
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
-                          <span>{formatarData(tarefa.dataLembrete)}</span>
+                          <span>{formatarData(tarefa.dataVencimento)}</span>
                         </div>
 
                         {tarefa.leadId && (

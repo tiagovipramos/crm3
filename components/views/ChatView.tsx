@@ -500,7 +500,7 @@ export default function ChatView() {
         descricao: descricaoTarefa,
         dataInput: dataTarefa,
         horaInput: horaTarefa,
-        dataHora: dataFormatada
+        dataVencimento: dataFormatada
       });
 
       // Salvar no backend
@@ -509,7 +509,7 @@ export default function ChatView() {
         leadId: leadSelecionado.id,
         titulo: tituloTarefa,
         descricao: descricaoTarefa || '',
-        dataHora: dataFormatada,
+        dataVencimento: dataFormatada,
         status: 'pendente'
       });
       

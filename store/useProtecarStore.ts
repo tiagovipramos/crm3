@@ -779,11 +779,11 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
         leadId: tarefa.lead_id ? String(tarefa.lead_id) : undefined,
         titulo: tarefa.titulo,
         descricao: tarefa.descricao || undefined,
-        tipo: 'outro' as const, // Tipo padrão pois não temos no banco
-        dataLembrete: tarefa.data_hora || tarefa.dataLembrete,
-        concluida: tarefa.status === 'concluida',
-        dataCriacao: tarefa.criado_em || tarefa.dataCriacao || new Date().toISOString(),
-        dataConclusao: tarefa.concluida_em || tarefa.dataConclusao
+        dataVencimento: tarefa.data_vencimento || tarefa.dataVencimento,
+        prioridade: tarefa.prioridade || 'media',
+        status: tarefa.status || 'pendente',
+        dataCriacao: tarefa.data_criacao || tarefa.dataCriacao || new Date().toISOString(),
+        dataConclusao: tarefa.data_conclusao || tarefa.dataConclusao
       }));
       
       console.log('✅ Tarefas formatadas:', tarefasFormatadas);
@@ -799,7 +799,6 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
     const novaTarefa: Tarefa = {
       ...dados,
       id: `task-${Date.now()}`,
-      concluida: false,
       dataCriacao: new Date().toISOString()
     };
 
@@ -813,7 +812,7 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
       set({
         tarefas: get().tarefas.map(t =>
           t.id === tarefaId
-            ? { ...t, concluida: true, dataConclusao: new Date().toISOString() }
+            ? { ...t, status: 'concluida', dataConclusao: new Date().toISOString() }
             : t
         )
       });
@@ -853,10 +852,10 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
     }
     
     const tarefasFiltradas = tarefas.filter(t => {
-      return String(t.consultorId) === String(consultorAtual.id) && !t.concluida;
+      return String(t.consultorId) === String(consultorAtual.id) && t.status !== 'concluida' && t.status !== 'cancelada';
     });
     
-    return tarefasFiltradas.sort((a, b) => new Date(a.dataLembrete).getTime() - new Date(b.dataLembrete).getTime());
+    return tarefasFiltradas.sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime());
   },
 
   getTarefasDoLead: (leadId) => {
@@ -930,9 +929,9 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
             consultorId: get().consultorAtual!.id,
             leadId,
             titulo: automacao.parametros.mensagem || 'Tarefa automática',
-            tipo: 'outro',
-            dataLembrete: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            concluida: false
+            dataVencimento: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            prioridade: 'media',
+            status: 'pendente'
           });
           break;
       }

@@ -48,27 +48,27 @@ export const getTarefasByLead = async (req: Request, res: Response) => {
 // Criar nova tarefa
 export const createTarefa = async (req: Request, res: Response) => {
   try {
-    const { leadId, titulo, descricao, dataHora } = req.body;
+    const { leadId, titulo, descricao, dataVencimento } = req.body;
     const consultorId = (req as any).user.id;
 
     console.log('📝 Dados recebidos para criar tarefa:', {
       leadId,
       titulo,
       descricao,
-      dataHora,
+      dataVencimento,
       consultorId
     });
 
     // Validação
-    if (!leadId || !titulo || !dataHora) {
+    if (!leadId || !titulo || !dataVencimento) {
       return res.status(400).json({ 
-        error: 'Campos obrigatórios: leadId, titulo, dataHora' 
+        error: 'Campos obrigatórios: leadId, titulo, dataVencimento' 
       });
     }
 
     // O frontend já envia no formato MySQL correto (yyyy-mm-dd hh:mm:ss)
     // NÃO converter com new Date() para evitar problemas de timezone
-    const dataFormatada = dataHora;
+    const dataFormatada = dataVencimento;
     
     console.log('🕐 Data recebida (sem conversão):', dataFormatada);
 
