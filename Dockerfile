@@ -12,6 +12,11 @@ RUN npm install
 # Rebuild do código fonte apenas quando necessário
 FROM base AS builder
 WORKDIR /app
+
+# Receber variável do docker-compose
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
