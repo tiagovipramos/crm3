@@ -318,6 +318,42 @@ export const updateLead = async (req: Request, res: Response) => {
             
             console.log('✅ Comissão de venda adicionada com sucesso!');
             
+          } else if (indicacao.status === 'converteu' && novoStatus !== 'convertido') {
+            console.log('🔄 Revertendo venda - Removendo R$ 15,00 de comissão');
+            
+            // Remover comissão de venda
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel - 15.00,
+                   indicacoes_convertidas = indicacoes_convertidas - 1,
+                   vendas_para_proxima_caixa = GREATEST(vendas_para_proxima_caixa - 1, 0)
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'respondeu',
+                   comissao_venda = 0,
+                   data_conversao = NULL
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'debito', 15.00, saldo_disponivel + 15.00, saldo_disponivel,
+                'Reversão de venda - Status alterado para ${novoStatus}'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Venda revertida com sucesso! R$ 15,00 removidos');
+            
           } else if (novoStatus === 'perdido' && indicacao.status === 'enviado_crm') {
             console.log('❌ Movendo R$ 2,00 para saldo perdido');
             
