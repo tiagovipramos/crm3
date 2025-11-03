@@ -32,12 +32,6 @@ export default function TarefaNotification() {
         setTarefasParaNotificar(prev => {
           const novasTarefas = tarefasVencendo.filter(t => !prev.find(p => p.id === t.id));
           if (novasTarefas.length > 0) {
-            // Tocar som de notificação
-            try {
-              const audio = new Audio('/notification.mp3');
-              audio.play().catch(() => {}); // Ignora erro se não houver som
-            } catch (e) {}
-            
             // Marcar como notificadas
             setTarefasNotificadas(prev => {
               const novo = new Set(prev);

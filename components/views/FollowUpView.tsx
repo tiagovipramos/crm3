@@ -88,11 +88,11 @@ function SequenciaModal({
       };
 
       if (sequencia) {
-        await axios.put(`${API_URL}/api/followup/sequencias/${sequencia.id}`, dados, {
+        await axios.put(`${API_URL}/followup/sequencias/${sequencia.id}`, dados, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await axios.post(`${API_URL}/api/followup/sequencias`, dados, {
+        await axios.post(`${API_URL}/followup/sequencias`, dados, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -318,13 +318,13 @@ export default function FollowUpView() {
       
       // Carregar dados com tratamento individual de erros
       const results = await Promise.allSettled([
-        axios.get(`${API_URL}/api/followup/sequencias`, {
+        axios.get(`${API_URL}/followup/sequencias`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API_URL}/api/followup/estatisticas`, {
+        axios.get(`${API_URL}/followup/estatisticas`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API_URL}/api/followup/proximos-envios?limit=20`, {
+        axios.get(`${API_URL}/followup/proximos-envios?limit=20`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -362,7 +362,7 @@ export default function FollowUpView() {
   const handleEditarSequencia = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_URL}/api/followup/sequencias/${id}`, {
+      const res = await axios.get(`${API_URL}/followup/sequencias/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSequenciaEditando(res.data);
@@ -377,7 +377,7 @@ export default function FollowUpView() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/followup/sequencias/${id}`, {
+      await axios.delete(`${API_URL}/followup/sequencias/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       carregarDados();
@@ -392,7 +392,7 @@ export default function FollowUpView() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/followup/processar`, {}, {
+      await axios.post(`${API_URL}/followup/processar`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('Envios processados com sucesso!');
