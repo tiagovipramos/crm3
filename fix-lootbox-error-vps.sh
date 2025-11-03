@@ -61,21 +61,21 @@ echo "📦 Passo 2: Executando migration 04-lootbox"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Copiar arquivo de migration para dentro do container
-docker cp backend/migrations/04-lootbox-indicadores.sql $(docker-compose ps -q db):/tmp/migration.sql
+docker cp backend/migrations/04-lootbox-indicadores.sql $(docker-compose ps -q mysql):/tmp/migration.sql
 
 # Executar migration dentro do container
-docker-compose exec -T db sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE < /tmp/migration.sql"
+docker-compose exec -T mysql sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE < /tmp/migration.sql"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Migration executada com sucesso!"
     # Limpar arquivo temporário
-    docker-compose exec -T db rm /tmp/migration.sql
+    docker-compose exec -T mysql rm /tmp/migration.sql
 else
     echo -e "${RED}✗${NC} Erro ao executar migration"
     echo ""
     echo "Tentando abordagem alternativa..."
     # Tentar executar linha por linha
-    docker-compose exec -T db mysql -u root -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
+    docker-compose exec -T mysql mysql -u root -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓${NC} Migration executada com sucesso (método alternativo)!"
@@ -91,7 +91,7 @@ echo "🔍 Passo 3: Verificando colunas criadas"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Verificar se as colunas foram criadas via docker-compose exec
-docker-compose exec -T db sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE -e \"
+docker-compose exec -T mysql sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE -e \"
 SHOW COLUMNS FROM indicadores WHERE Field IN (
     'leads_para_proxima_caixa',
     'total_caixas_abertas',
