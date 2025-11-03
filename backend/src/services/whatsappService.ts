@@ -354,15 +354,112 @@ class WhatsAppService {
 
   async desconectar(consultorId: string) {
     const session = this.sessions.get(consultorId);
+    
+    console.log('🔌 Iniciando desconexão do WhatsApp para consultor:', consultorId);
+    
     if (session?.sock) {
-      await session.sock.logout();
-      this.sessions.delete(consultorId);
-
-      const [rows] = await pool.query(
-        'UPDATE consultores SET status_conexao = ?, sessao_whatsapp = NULL WHERE id = ?',
+      try {
+        // 1. Fazer logout do WhatsApp
+        console.log('📤 Fazendo logout do WhatsApp...');
+        await session.sock.logout();
+        console.log('✅ Logout realizado');
+      } catch (error) {
+        console.error('⚠️ Erro ao fazer logout (continuando mesmo assim):', error);
+      }
+      
+      // 2. Fechar o socket
+      try {
+        console.log('🔌 Fechando socket...');
+        await session.sock.end(undefined);
+        console.log('✅ Socket fechado');
+      } catch (error) {
+        console.error('⚠️ Erro ao fechar socket:', error);
+      }
+    }
+    
+    // 3. Remover sessão do Map (sempre, mesmo se não tinha socket)
+    this.sessions.delete(consultorId);
+    console.log('✅ Sessão removida do Map');
+    
+    // 4. Deletar pasta de autenticação
+    const fs = require('fs');
+    const path = require('path');
+    const authPath = path.join(process.cwd(), `auth_${consultorId}`);
+    
+    console.log(`📂 Verificando pasta de autenticação: ${authPath}`);
+    
+    try {
+      if (fs.existsSync(authPath)) {
+        console.log('🗑️ Deletando arquivos de autenticação...');
+        
+        // Usar rmSync com opções robustas
+        fs.rmSync(authPath, { 
+          recursive: true, 
+          force: true,
+          maxRetries: 3,
+          retryDelay: 100
+        });
+        
+        // Verificar se foi realmente deletado
+        if (!fs.existsSync(authPath)) {
+          console.log('✅ Arquivos de autenticação removidos com sucesso!');
+        } else {
+          console.warn('⚠️ Pasta ainda existe após tentativa de remoção');
+          
+          // Tentar método alternativo
+          try {
+            const { execSync } = require('child_process');
+            if (process.platform === 'win32') {
+              execSync(`rmdir /s /q "${authPath}"`, { stdio: 'ignore' });
+            } else {
+              execSync(`rm -rf "${authPath}"`, { stdio: 'ignore' });
+            }
+            console.log('✅ Pasta removida com comando do sistema');
+          } catch (cmdError) {
+            console.error('❌ Falha no método alternativo:', cmdError);
+          }
+        }
+      } else {
+        console.log('ℹ️ Pasta de autenticação não encontrada (já foi removida?)');
+      }
+    } catch (deleteError) {
+      console.error('❌ Erro ao deletar pasta de autenticação:', deleteError);
+    }
+    
+    // 5. Atualizar banco de dados
+    try {
+      console.log('💾 Atualizando status no banco de dados...');
+      await pool.query(
+        'UPDATE consultores SET status_conexao = ?, sessao_whatsapp = NULL, numero_whatsapp = NULL WHERE id = ?',
         ['offline', consultorId]
       );
+      console.log('✅ Status atualizado no banco: offline');
+    } catch (dbError) {
+      console.error('❌ Erro ao atualizar banco de dados:', dbError);
     }
+    
+    // 6. Emitir eventos Socket.IO
+    if (this.io) {
+      console.log('📡 Emitindo eventos de desconexão...');
+      
+      // Para o consultor
+      this.io.to(`consultor_${consultorId}`).emit('whatsapp_disconnected', {
+        consultorId,
+        reason: 'manual_disconnect',
+        message: 'WhatsApp desconectado com sucesso. Sessão limpa.'
+      });
+      
+      // Para admins
+      this.io.to('admins').emit('whatsapp_disconnected', {
+        consultorId,
+        reason: 'manual_disconnect',
+        message: 'WhatsApp desconectado com sucesso. Sessão limpa.'
+      });
+      
+      console.log('✅ Eventos Socket.IO emitidos');
+    }
+    
+    console.log('🎉 Desconexão concluída com sucesso!');
   }
 
   async enviarMensagem(consultorId: string, numero: string, conteudo: string, leadIdEspecifico?: string) {
