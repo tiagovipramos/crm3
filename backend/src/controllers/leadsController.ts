@@ -246,8 +246,8 @@ export const updateLead = async (req: Request, res: Response) => {
           const indicadorId = leadComIndicador.indicador_id;
           
           // Aplicar regras de comissão baseadas no status
-          if (novoStatus === 'primeiro_contato' && indicacao.status === 'enviado_crm') {
-            console.log('💰 Liberando R$ 2,00 bloqueados (primeiro contato)');
+          if ((novoStatus === 'primeiro_contato' || novoStatus === 'proposta_enviada') && indicacao.status === 'enviado_crm') {
+            console.log('💰 Liberando R$ 2,00 bloqueados (primeiro contato/proposta enviada)');
             
             // Liberar saldo bloqueado
             await pool.query(
