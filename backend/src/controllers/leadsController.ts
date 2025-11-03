@@ -310,7 +310,7 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'comissao_venda', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
+                ?, ?, 'liberacao', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
                 'Comissão de venda - Lead convertido'
                FROM indicadores WHERE id = ?`,
               [indicadorId, indicacao.id, indicadorId]
