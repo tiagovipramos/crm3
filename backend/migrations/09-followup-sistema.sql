@@ -14,10 +14,9 @@ CREATE TABLE IF NOT EXISTS followup_sequencias (
   criado_por VARCHAR(36),
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (criado_por) REFERENCES consultores(id) ON DELETE SET NULL,
   INDEX idx_fase (fase_inicio),
   INDEX idx_ativo (ativo)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Mensagens das Sequências
 CREATE TABLE IF NOT EXISTS followup_mensagens (
@@ -31,7 +30,7 @@ CREATE TABLE IF NOT EXISTS followup_mensagens (
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (sequencia_id) REFERENCES followup_sequencias(id) ON DELETE CASCADE,
   INDEX idx_sequencia (sequencia_id, ordem)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabela de Leads em Follow-up
 CREATE TABLE IF NOT EXISTS followup_leads (
