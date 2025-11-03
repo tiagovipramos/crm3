@@ -9,12 +9,12 @@ export const getTarefas = async (req: Request, res: Response) => {
 
     const [tarefas] = await pool.query<RowDataPacket[]>(
       `SELECT t.*, 
-       DATE_FORMAT(t.data_hora, '%Y-%m-%d %H:%i:%s') as data_hora,
+       DATE_FORMAT(t.data_vencimento, '%Y-%m-%d %H:%i:%s') as data_vencimento,
        l.nome as lead_nome, l.telefone as lead_telefone
        FROM tarefas t
        LEFT JOIN leads l ON t.lead_id = l.id
        WHERE t.consultor_id = ?
-       ORDER BY t.data_hora ASC`,
+       ORDER BY t.data_vencimento ASC`,
       [consultorId]
     );
 
@@ -34,7 +34,7 @@ export const getTarefasByLead = async (req: Request, res: Response) => {
     const [tarefas] = await pool.query<RowDataPacket[]>(
       `SELECT * FROM tarefas 
        WHERE lead_id = ? AND consultor_id = ?
-       ORDER BY data_hora ASC`,
+       ORDER BY data_vencimento ASC`,
       [leadId, consultorId]
     );
 
@@ -73,8 +73,8 @@ export const createTarefa = async (req: Request, res: Response) => {
     console.log('🕐 Data recebida (sem conversão):', dataFormatada);
 
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO tarefas (lead_id, consultor_id, titulo, descricao, data_hora, status, criado_em)
-       VALUES (?, ?, ?, ?, ?, 'pendente', NOW())`,
+      `INSERT INTO tarefas (lead_id, consultor_id, titulo, descricao, data_vencimento, status)
+       VALUES (?, ?, ?, ?, ?, 'pendente')`,
       [leadId, consultorId, titulo, descricao || '', dataFormatada]
     );
 
@@ -104,7 +104,7 @@ export const completeTarefa = async (req: Request, res: Response) => {
 
     await pool.query(
       `UPDATE tarefas 
-       SET status = 'concluida', concluida_em = NOW()
+       SET status = 'concluida', data_conclusao = NOW()
        WHERE id = ? AND consultor_id = ?`,
       [id, consultorId]
     );
