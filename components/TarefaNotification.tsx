@@ -21,8 +21,8 @@ export default function TarefaNotification() {
         }
 
         // Parse da data/hora da tarefa (formato MySQL: yyyy-mm-dd hh:mm:ss)
-        const dataLembrete = new Date(tarefa.dataLembrete.replace(' ', 'T'));
-        const diferenca = dataLembrete.getTime() - agora.getTime();
+        const dataVencimento = new Date(tarefa.dataVencimento.replace(' ', 'T'));
+        const diferenca = dataVencimento.getTime() - agora.getTime();
         
         // Notificar se está dentro de 5 minutos antes ou já passou (até 1h atrasada)
         return diferenca <= 5 * 60 * 1000 && diferenca >= -60 * 60 * 1000;
@@ -91,8 +91,8 @@ export default function TarefaNotification() {
       {tarefasParaNotificar.map((tarefa) => {
         const leadNome = getLeadNome(tarefa.leadId);
         const agora = new Date();
-        const dataLembrete = new Date(tarefa.dataLembrete);
-        const atrasada = dataLembrete < agora;
+        const dataVencimento = new Date(tarefa.dataVencimento);
+        const atrasada = dataVencimento < agora;
 
         return (
           <div
@@ -123,7 +123,7 @@ export default function TarefaNotification() {
                     {atrasada ? '⚠️ Tarefa Atrasada!' : '🔔 Lembrete de Tarefa'}
                   </p>
                   <p className="text-sm font-medium text-gray-700">
-                    ⏰ {formatarHorario(tarefa.dataLembrete)}
+                    ⏰ {formatarHorario(tarefa.dataVencimento)}
                   </p>
                 </div>
               </div>
