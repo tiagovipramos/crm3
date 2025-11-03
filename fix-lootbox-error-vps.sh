@@ -45,8 +45,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "📦 Passo 1: Executando migration 04-lootbox"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Executar migration
-mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
+# Executar migration via docker-compose exec
+docker-compose exec -T db mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Migration executada com sucesso!"
@@ -60,8 +60,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔍 Passo 2: Verificando colunas criadas"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Verificar se as colunas foram criadas
-mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "
+# Verificar se as colunas foram criadas via docker-compose exec
+docker-compose exec -T db mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "
 SHOW COLUMNS FROM indicadores WHERE Field IN (
     'leads_para_proxima_caixa',
     'total_caixas_abertas',
