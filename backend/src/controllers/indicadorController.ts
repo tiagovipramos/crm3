@@ -759,7 +759,7 @@ export const deletarTodasIndicacoes = async (req: IndicadorAuthRequest, res: Res
     const indicadorId = req.indicadorId;
 
     await pool.query(
-      'UPDATE leads SET indicador_id = NULL, indicacao_id = NULL WHERE indicador_id = ?',
+      'UPDATE leads SET indicador_id = NULL WHERE indicador_id = ?',
       [indicadorId]
     );
 
