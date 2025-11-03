@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useProtecarStore } from '@/store/useProtecarStore';
 import { Smartphone, LogOut } from 'lucide-react';
 import WhatsAppQRModal from '@/components/WhatsAppQRModal';
+import { whatsappAPI } from '@/lib/api';
 
 export default function ConfiguracoesView() {
   const { consultorAtual } = useProtecarStore();
@@ -17,23 +18,13 @@ export default function ConfiguracoesView() {
 
     setDesconectando(true);
     try {
-      const response = await fetch('/api/whatsapp/disconnect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        alert('✅ WhatsApp desconectado com sucesso!');
-        // Atualizar estado será feito pelo Socket.IO
-      } else {
-        const data = await response.json();
-        alert('❌ Erro ao desconectar: ' + (data.error || 'Erro desconhecido'));
-      }
-    } catch (error) {
+      await whatsappAPI.disconnect();
+      alert('✅ WhatsApp desconectado com sucesso!');
+      // Atualizar estado será feito pelo Socket.IO
+    } catch (error: any) {
       console.error('Erro ao desconectar WhatsApp:', error);
-      alert('❌ Erro ao desconectar WhatsApp');
+      const errorMsg = error.response?.data?.error || error.message || 'Erro desconhecido';
+      alert('❌ Erro ao desconectar: ' + errorMsg);
     } finally {
       setDesconectando(false);
     }
