@@ -212,13 +212,170 @@ export const updateLead = async (req: Request, res: Response) => {
 
     console.log('✅ Lead atualizado no banco de dados');
 
+    // 🎯 SISTEMA DE COMISSÕES AUTOMÁTICAS PARA INDICADORES
+    console.log('🔍 [DEBUG] Verificando se status foi alterado...');
+    console.log('🔍 [DEBUG] fields:', fields);
+    console.log('🔍 [DEBUG] fields.includes("status"):', fields.includes('status'));
+    
+    if (fields.includes('status')) {
+      console.log('💰 Status alterado! Verificando comissões do indicador...');
+      
+      // Buscar se o lead tem indicador
+      const [leadIndicadorRows] = await pool.query(
+        'SELECT indicador_id FROM leads WHERE id = ?',
+        [id]
+      );
+      
+      const leadComIndicador = (leadIndicadorRows as any[])[0];
+      
+      if (leadComIndicador?.indicador_id) {
+        console.log('✅ Lead tem indicador:', leadComIndicador.indicador_id);
+        
+        // Buscar a indicação relacionada
+        const [indicacaoRows] = await pool.query(
+          'SELECT * FROM indicacoes WHERE lead_id = ?',
+          [id]
+        );
+        
+        const indicacao = (indicacaoRows as any[])[0];
+        
+        if (indicacao) {
+          console.log('✅ Indicação encontrada:', indicacao.id, 'Status atual:', indicacao.status);
+          
+          const novoStatus = updates.status;
+          const indicadorId = leadComIndicador.indicador_id;
+          
+          // Aplicar regras de comissão baseadas no status
+          if (novoStatus === 'primeiro_contato' && indicacao.status === 'enviado_crm') {
+            console.log('💰 Liberando R$ 2,00 bloqueados (primeiro contato)');
+            
+            // Liberar saldo bloqueado
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel + 2.00,
+                   saldo_bloqueado = saldo_bloqueado - 2.00,
+                   indicacoes_respondidas = indicacoes_respondidas + 1
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'respondeu',
+                   comissao_resposta = 2.00,
+                   data_resposta = NOW()
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'liberacao', 2.00, saldo_disponivel - 2.00, saldo_disponivel,
+                'Comissão liberada - Lead respondeu'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Comissão de resposta liberada com sucesso!');
+            
+          } else if (novoStatus === 'convertido' && indicacao.status !== 'converteu') {
+            console.log('💰 Adicionando R$ 15,00 de comissão de venda');
+            
+            // Adicionar comissão de venda
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel + 15.00,
+                   indicacoes_convertidas = indicacoes_convertidas + 1,
+                   vendas_para_proxima_caixa = vendas_para_proxima_caixa + 1
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'converteu',
+                   comissao_venda = 15.00,
+                   data_conversao = NOW()
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'comissao_venda', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
+                'Comissão de venda - Lead convertido'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Comissão de venda adicionada com sucesso!');
+            
+          } else if (novoStatus === 'perdido' && indicacao.status === 'enviado_crm') {
+            console.log('❌ Movendo R$ 2,00 para saldo perdido');
+            
+            // Mover saldo bloqueado para perdido
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_bloqueado = saldo_bloqueado - 2.00,
+                   saldo_perdido = saldo_perdido + 2.00
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'engano'
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'perda', 2.00, saldo_bloqueado + 2.00, saldo_bloqueado,
+                'Comissão perdida - Lead marcado como perdido'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Saldo movido para perdido');
+          }
+          
+          // Emitir Socket.IO para o indicador atualizar em tempo real
+          const io = (req.app as any).get('io');
+          if (io) {
+            console.log('📡 Emitindo evento para indicador atualizar saldo');
+            io.to(`indicador_${indicadorId}`).emit('saldo_atualizado', {
+              indicadorId,
+              leadId: id,
+              status: novoStatus,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      } else {
+        console.log('ℹ️ Lead não tem indicador (lead manual)');
+      }
+    }
+
     // Se o status foi atualizado, emitir evento Socket.IO para admins
     if (fields.includes('status')) {
       const io = (req.app as any).get('io');
       console.log('🔍 DEBUG: Status foi atualizado! io existe?', !!io);
       if (io) {
         console.log('📡 Emitindo evento lead_status_atualizado para admins');
-        console.log('📊 Dados do evento:', { leadId: id, consultorId, status: updates.status });
+        console.log('� Dados do evento:', { leadId: id, consultorId, status: updates.status });
         io.to('admins').emit('lead_status_atualizado', {
           leadId: id,
           consultorId,
