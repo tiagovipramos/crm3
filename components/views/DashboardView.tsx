@@ -229,7 +229,7 @@ export default function DashboardView() {
                           <p className="text-xs text-gray-600">{lead.nome}</p>
                         )}
                         <p className="text-xs text-gray-500 mt-1">
-                          {new Date(tarefa.dataLembrete).toLocaleDateString('pt-BR')}
+                          {new Date(tarefa.dataVencimento).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
                     </div>
