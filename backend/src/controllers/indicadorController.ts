@@ -960,7 +960,13 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
     const indicadorId = req.indicadorId;
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT leads_para_proxima_caixa, total_caixas_abertas, total_ganho_caixas
+      `SELECT 
+        leads_para_proxima_caixa, 
+        total_caixas_abertas, 
+        total_ganho_caixas,
+        vendas_para_proxima_caixa,
+        total_caixas_vendas_abertas,
+        total_ganho_caixas_vendas
        FROM indicadores WHERE id = ?`,
       [indicadorId]
     );
@@ -973,12 +979,29 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
 
     const indicador = rows[0];
 
+    // Buscar histórico de loot boxes (opcional para o futuro)
+    const historico: any[] = [];
+
     res.json({
+      // Loot box de leads/indicações
       leadsParaProximaCaixa: indicador.leads_para_proxima_caixa || 0,
       leadsNecessarios: 10,
-      podeAbrir: (indicador.leads_para_proxima_caixa || 0) >= 10,
+      podeAbrirIndicacoes: (indicador.leads_para_proxima_caixa || 0) >= 10,
       totalCaixasAbertas: indicador.total_caixas_abertas || 0,
-      totalGanhoCaixas: parseFloat(indicador.total_ganho_caixas || 0)
+      totalGanhoCaixas: parseFloat(indicador.total_ganho_caixas || 0),
+      
+      // Loot box de vendas
+      vendasParaProximaCaixa: indicador.vendas_para_proxima_caixa || 0,
+      vendasNecessarias: 5,
+      podeAbrirVendas: (indicador.vendas_para_proxima_caixa || 0) >= 5,
+      totalCaixasVendasAbertas: indicador.total_caixas_vendas_abertas || 0,
+      totalGanhoCaixasVendas: parseFloat(indicador.total_ganho_caixas_vendas || 0),
+      
+      // Histórico (vazio por enquanto)
+      historico: historico,
+      
+      // Compatibilidade com código antigo
+      podeAbrir: (indicador.leads_para_proxima_caixa || 0) >= 10
     });
   } catch (error) {
     console.error('Erro ao buscar status da loot box:', error);
