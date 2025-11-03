@@ -274,7 +274,7 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'liberacao', 2.00, saldo_disponivel - 2.00, saldo_disponivel,
+                ?, ?, 'desbloqueio', 2.00, saldo_disponivel - 2.00, saldo_disponivel,
                 'Comissão liberada - Lead respondeu'
                FROM indicadores WHERE id = ?`,
               [indicadorId, indicacao.id, indicadorId]
@@ -310,7 +310,7 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'liberacao', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
+                ?, ?, 'credito', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
                 'Comissão de venda - Lead convertido'
                FROM indicadores WHERE id = ?`,
               [indicadorId, indicacao.id, indicadorId]
@@ -343,7 +343,7 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'perda', 2.00, saldo_bloqueado + 2.00, saldo_bloqueado,
+                ?, ?, 'debito', 2.00, saldo_bloqueado + 2.00, saldo_bloqueado,
                 'Comissão perdida - Lead marcado como perdido'
                FROM indicadores WHERE id = ?`,
               [indicadorId, indicacao.id, indicadorId]
