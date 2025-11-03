@@ -106,10 +106,6 @@ export const createLead = async (req: Request, res: Response) => {
       nome,
       telefone,
       email,
-      cidade,
-      modeloVeiculo,
-      placaVeiculo,
-      anoVeiculo,
       origem,
       observacoes
     } = req.body;
@@ -140,11 +136,10 @@ export const createLead = async (req: Request, res: Response) => {
     
     const insertResult = await pool.query(
       `INSERT INTO leads (
-        nome, telefone, email, cidade, modelo_veiculo, placa_veiculo, 
-        ano_veiculo, origem, status, consultor_id, observacoes,
+        nome, telefone, email, origem, status, consultor_id, observacoes,
         mensagens_nao_lidas, data_criacao, data_atualizacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'novo', ?, ?, 0, NOW(), NOW())`,
-      [nome, telefoneNormalizado, email, cidade, modeloVeiculo, placaVeiculo, anoVeiculo, origem || 'Manual', consultorId, observacoes]
+      ) VALUES (?, ?, ?, ?, 'novo', ?, ?, 0, NOW(), NOW())`,
+      [nome, telefoneNormalizado, email, origem || 'Manual', consultorId, observacoes]
     );
 
     // Buscar lead criado para retornar com todos os campos
