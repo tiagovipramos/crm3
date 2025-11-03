@@ -543,10 +543,19 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
         [nomeIndicado, validacao.telefone, consultorId, indicadorId]
       );
 
+      // 🔍 DEBUG: Verificar resultado do INSERT
+      console.log('🔍 DEBUG leadResult completo:', JSON.stringify(leadResult, null, 2));
+      console.log('🔍 DEBUG leadResult.insertId:', leadResult.insertId, 'Tipo:', typeof leadResult.insertId);
+      console.log('🔍 DEBUG leadResult.affectedRows:', leadResult.affectedRows);
+
       // Usar o ID do lead recém-criado (insertId do resultado do INSERT)
       const leadId = leadResult.insertId;
+      console.log('🔍 DEBUG leadId atribuído:', leadId, 'Tipo:', typeof leadId);
+      console.log('🔍 DEBUG Teste: leadId > 0?', leadId > 0);
+      console.log('🔍 DEBUG Teste: leadId && leadId > 0?', leadId && leadId > 0);
 
       if (leadId && leadId > 0) {
+        console.log('✅ DEBUG: Entrando no IF - leadId é válido!');
         await pool.query(
           'UPDATE indicacoes SET lead_id = ?, status = ? WHERE id = ?',
           [leadId, 'enviado_crm', indicacao.id]
