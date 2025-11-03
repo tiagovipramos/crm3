@@ -543,19 +543,23 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
         [nomeIndicado, validacao.telefone, consultorId, indicadorId]
       );
 
-      // 🔍 DEBUG: Verificar resultado do INSERT
-      console.log('🔍 DEBUG leadResult completo:', JSON.stringify(leadResult, null, 2));
-      console.log('🔍 DEBUG leadResult.insertId:', leadResult.insertId, 'Tipo:', typeof leadResult.insertId);
-      console.log('🔍 DEBUG leadResult.affectedRows:', leadResult.affectedRows);
+      // 🔍 IMPORTANTE: Como a tabela usa UUID, insertId sempre retorna 0
+      // Precisamos fazer SELECT para buscar o lead recém-criado
+      console.log('📊 INSERT executado com sucesso. affectedRows:', leadResult.affectedRows);
+      
+      // Buscar o lead recém-criado pelo telefone e consultor
+      const [leadRows] = await pool.query<RowDataPacket[]>(
+        `SELECT id FROM leads 
+         WHERE telefone = ? AND consultor_id = ? 
+         ORDER BY data_criacao DESC LIMIT 1`,
+        [validacao.telefone, consultorId]
+      );
 
-      // Usar o ID do lead recém-criado (insertId do resultado do INSERT)
-      const leadId = leadResult.insertId;
-      console.log('🔍 DEBUG leadId atribuído:', leadId, 'Tipo:', typeof leadId);
-      console.log('🔍 DEBUG Teste: leadId > 0?', leadId > 0);
-      console.log('🔍 DEBUG Teste: leadId && leadId > 0?', leadId && leadId > 0);
+      const leadId = leadRows[0]?.id;
+      console.log('✅ Lead ID recuperado do banco:', leadId);
 
-      if (leadId && leadId > 0) {
-        console.log('✅ DEBUG: Entrando no IF - leadId é válido!');
+      if (leadId) {
+        console.log('✅ Entrando no bloco de Socket.IO e WhatsApp');
         await pool.query(
           'UPDATE indicacoes SET lead_id = ?, status = ? WHERE id = ?',
           [leadId, 'enviado_crm', indicacao.id]
