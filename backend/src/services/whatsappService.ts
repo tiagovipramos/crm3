@@ -530,25 +530,8 @@ class WhatsAppService {
         [conteudo.substring(0, 50), numero.replace(/\D/g, '')]
       );
 
-      // 📡 Emitir evento Socket.IO para atualizar o frontend em tempo real
-      if (this.io) {
-        console.log('📡 Emitindo evento nova_mensagem para mensagem enviada automaticamente');
-        this.io.to(`consultor_${consultorId}`).emit('nova_mensagem', {
-          id: mensagemId, // ✅ Incluir ID da mensagem
-          leadId,
-          consultorId,
-          numero: numero.replace(/\D/g, ''),
-          conteudo,
-          tipo: 'texto',
-          remetente: 'consultor',
-          status: 'enviada',
-          mediaUrl: null,
-          mediaName: null,
-          timestamp: new Date().toISOString(),
-          isNovoLead: false
-        });
-        console.log('✅ Evento Socket.IO emitido com sucesso para mensagem automática (ID:', mensagemId, ')');
-      }
+      // Nota: O evento Socket.IO é emitido pelo mensagensController.ts após salvar no banco
+      // para evitar duplicação de mensagens no frontend
 
       return { success: true };
     } catch (error) {
