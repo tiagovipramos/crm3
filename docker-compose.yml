@@ -49,6 +49,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/uploads:/app/uploads
+      - whatsapp_sessions:/app/auth_sessions
     networks:
       - crm-network
 
@@ -75,6 +76,8 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
+  whatsapp_sessions:
     driver: local
 
 networks:

@@ -41,7 +41,7 @@ class WhatsAppService {
 
     // Verificar se existe pasta de autenticação
     const fs = require('fs');
-    const authPath = `./auth_${consultorId}`;
+    const authPath = `./auth_sessions/auth_${consultorId}`;
     
     if (!fs.existsSync(authPath)) {
       console.log('📁 Nenhuma sessão salva encontrada');
@@ -72,7 +72,7 @@ class WhatsAppService {
         return null;
       }
 
-      const { state, saveCreds } = await useMultiFileAuthState(`./auth_${consultorId}`);
+      const { state, saveCreds } = await useMultiFileAuthState(`./auth_sessions/auth_${consultorId}`);
 
       const sock = makeWASocket({
         auth: state,
@@ -174,7 +174,7 @@ class WhatsAppService {
               
               const fs = require('fs');
               const path = require('path');
-              const authPath = path.join(process.cwd(), `auth_${consultorId}`);
+              const authPath = path.join(process.cwd(), 'auth_sessions', `auth_${consultorId}`);
               
               console.log(`📂 Verificando pasta: ${authPath}`);
               
@@ -384,7 +384,7 @@ class WhatsAppService {
     // 4. Deletar pasta de autenticação
     const fs = require('fs');
     const path = require('path');
-    const authPath = path.join(process.cwd(), `auth_${consultorId}`);
+    const authPath = path.join(process.cwd(), 'auth_sessions', `auth_${consultorId}`);
     
     console.log(`📂 Verificando pasta de autenticação: ${authPath}`);
     

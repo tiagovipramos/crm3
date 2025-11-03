@@ -217,10 +217,18 @@ const start = async () => {
           const fs = require('fs');
           const path = require('path');
           
-          // Buscar todas as pastas auth_* no diretório atual
-          const files = fs.readdirSync(process.cwd());
+          // Buscar todas as pastas auth_* no diretório auth_sessions
+          const authSessionsPath = path.join(process.cwd(), 'auth_sessions');
+          
+          // Criar diretório se não existir
+          if (!fs.existsSync(authSessionsPath)) {
+            fs.mkdirSync(authSessionsPath, { recursive: true });
+            console.log('📁 Diretório auth_sessions criado');
+          }
+          
+          const files = fs.readdirSync(authSessionsPath);
           const authFolders = files.filter((file: string) => 
-            file.startsWith('auth_') && fs.statSync(path.join(process.cwd(), file)).isDirectory()
+            file.startsWith('auth_') && fs.statSync(path.join(authSessionsPath, file)).isDirectory()
           );
 
           if (authFolders.length === 0) {
