@@ -42,26 +42,56 @@ fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Passo 1: Executando migration 04-lootbox"
+echo "📦 Passo 1: Verificando containers Docker"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Executar migration via docker-compose exec
-docker-compose exec -T db mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
-
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓${NC} Migration executada com sucesso!"
+# Verificar se os containers estão rodando
+if ! docker-compose ps | grep -q "Up"; then
+    echo -e "${YELLOW}⚠${NC} Containers não estão rodando. Iniciando..."
+    docker-compose up -d
+    sleep 15
+    echo -e "${GREEN}✓${NC} Containers iniciados"
 else
-    echo -e "${RED}✗${NC} Erro ao executar migration"
-    exit 1
+    echo -e "${GREEN}✓${NC} Containers já estão rodando"
 fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔍 Passo 2: Verificando colunas criadas"
+echo "📦 Passo 2: Executando migration 04-lootbox"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Copiar arquivo de migration para dentro do container
+docker cp backend/migrations/04-lootbox-indicadores.sql $(docker-compose ps -q db):/tmp/migration.sql
+
+# Executar migration dentro do container
+docker-compose exec -T db sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE < /tmp/migration.sql"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓${NC} Migration executada com sucesso!"
+    # Limpar arquivo temporário
+    docker-compose exec -T db rm /tmp/migration.sql
+else
+    echo -e "${RED}✗${NC} Erro ao executar migration"
+    echo ""
+    echo "Tentando abordagem alternativa..."
+    # Tentar executar linha por linha
+    docker-compose exec -T db mysql -u root -p"$DB_PASSWORD" "$DB_NAME" < backend/migrations/04-lootbox-indicadores.sql
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓${NC} Migration executada com sucesso (método alternativo)!"
+    else
+        echo -e "${RED}✗${NC} Erro ao executar migration mesmo com método alternativo"
+        exit 1
+    fi
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔍 Passo 3: Verificando colunas criadas"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Verificar se as colunas foram criadas via docker-compose exec
-docker-compose exec -T db mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "
+docker-compose exec -T db sh -c "mysql -u root -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE -e \"
 SHOW COLUMNS FROM indicadores WHERE Field IN (
     'leads_para_proxima_caixa',
     'total_caixas_abertas',
@@ -71,7 +101,7 @@ SHOW COLUMNS FROM indicadores WHERE Field IN (
     'total_ganho_caixas_vendas',
     'pix_chave',
     'pix_tipo'
-);"
+);\""
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓${NC} Colunas verificadas!"
@@ -81,7 +111,7 @@ fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔄 Passo 3: Reiniciando containers Docker"
+echo "🔄 Passo 4: Reiniciando containers Docker"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Rebuild e restart dos containers
@@ -97,14 +127,14 @@ fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "⏳ Passo 4: Aguardando containers iniciarem"
+echo "⏳ Passo 5: Aguardando containers iniciarem"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 sleep 10
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔍 Passo 5: Verificando status dos containers"
+echo "🔍 Passo 6: Verificando status dos containers"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 docker-compose ps
