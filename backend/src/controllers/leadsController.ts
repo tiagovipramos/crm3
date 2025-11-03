@@ -137,8 +137,8 @@ export const createLead = async (req: Request, res: Response) => {
     const insertResult = await pool.query(
       `INSERT INTO leads (
         nome, telefone, email, origem, status, consultor_id, observacoes,
-        mensagens_nao_lidas, data_criacao, data_atualizacao
-      ) VALUES (?, ?, ?, ?, 'novo', ?, ?, 0, NOW(), NOW())`,
+        data_criacao, data_atualizacao
+      ) VALUES (?, ?, ?, ?, 'novo', ?, ?, NOW(), NOW())`,
       [nome, telefoneNormalizado, email, origem || 'Manual', consultorId, observacoes]
     );
 
