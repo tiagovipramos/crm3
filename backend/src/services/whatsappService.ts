@@ -118,18 +118,35 @@ class WhatsAppService {
 
           if (connection === 'close') {
             const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             const errorMsg = (lastDisconnect?.error as any)?.message || 'Desconhecido';
 
             console.log(`❌ WhatsApp desconectado. Motivo: ${errorMsg} (Code: ${statusCode})`);
             console.log(`📋 Status Code: ${statusCode}, Logout Code: ${DisconnectReason.loggedOut}`);
             
-            // Remover sessão do map
+            // Remover sessão do map SEMPRE
             this.sessions.delete(consultorId);
             
+            // ✅ CORRIGIDO: Detectar corretamente quando NÃO deve reconectar
+            // Códigos que indicam logout manual/conflito (NÃO reconectar):
+            // - 401 (Unauthorized/Logout)
+            // - 440 (Session Conflict)
+            const isManualLogout = statusCode === DisconnectReason.loggedOut || 
+                                   statusCode === 401 || 
+                                   statusCode === 440;
+            
+            // Códigos que podem reconectar automaticamente:
+            // - 515 (Stream Error - restart required)
+            // - 408 (Connection Timeout)
+            // - undefined (erro de rede genérico)
+            const shouldReconnect = !isManualLogout && (
+              statusCode === 515 || 
+              statusCode === 408 || 
+              statusCode === undefined
+            );
+            
             if (shouldReconnect) {
-              // Reconectar automaticamente se não foi logout
-              console.log('🔄 Tentando reconectar WhatsApp em 3 segundos...');
+              // ✅ Reconectar apenas em erros de rede/temporários
+              console.log('🔄 Erro de conexão detectado. Tentando reconectar em 3 segundos...');
               
               // Atualizar status no banco
               const [rows] = await pool.query(
