@@ -538,9 +538,9 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       const [leadResult] = await pool.query<ResultSetHeader>(
         `INSERT INTO leads (
           nome, telefone, origem, status, 
-          consultor_id, indicador_id, indicacao_id, data_criacao, data_atualizacao
-        ) VALUES (?, ?, 'Indicação', 'indicacao', ?, ?, ?, NOW(), NOW())`,
-        [nomeIndicado, validacao.telefone, consultorId, indicadorId, indicacao.id]
+          consultor_id, indicador_id, data_criacao, data_atualizacao
+        ) VALUES (?, ?, 'Indicação', 'indicacao', ?, ?, NOW(), NOW())`,
+        [nomeIndicado, validacao.telefone, consultorId, indicadorId]
       );
 
       // Atualizar indicação com lead_id e status
