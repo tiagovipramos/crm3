@@ -105,6 +105,12 @@ io.on('connection', (socket) => {
     console.log(`👔 Admin ${adminId} entrou na room de admins`);
   });
 
+  // Indicador se junta a uma room específica
+  socket.on('join_indicador', (indicadorId: string) => {
+    socket.join(`indicador_${indicadorId}`);
+    console.log(`💰 Indicador ${indicadorId} entrou na room (socket: ${socket.id})`);
+  });
+
   // Consultor marca como online no sistema
   socket.on('consultor_online', async (consultorId: string) => {
     try {

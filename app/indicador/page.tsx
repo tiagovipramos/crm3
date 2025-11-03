@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import CelebrationConfetti from '@/components/CelebrationConfetti';
 import { useCelebration } from '@/hooks/useCelebration';
+import { useSocketIndicador } from '@/hooks/useSocketIndicador';
 import AvatarUpload from '@/components/AvatarUpload';
 import LootBox from '@/components/LootBox';
 import LootBoxProgressDual from '@/components/LootBoxProgressDual';
@@ -83,6 +84,9 @@ export default function IndicadorDashboardPage() {
   
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [previousIndicacoes, setPreviousIndicacoes] = useState<any[]>([]);
+  
+  // Socket.IO para atualizações em tempo real
+  useSocketIndicador();
 
   useEffect(() => {
     if (!token) {
