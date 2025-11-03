@@ -1,14 +1,83 @@
--- Adicionar colunas faltantes na tabela indicadores
-ALTER TABLE indicadores 
-ADD COLUMN IF NOT EXISTS saldo_disponivel DECIMAL(10, 2) DEFAULT 0.00 AFTER total_comissoes,
-ADD COLUMN IF NOT EXISTS saldo_bloqueado DECIMAL(10, 2) DEFAULT 0.00 AFTER saldo_disponivel,
-ADD COLUMN IF NOT EXISTS saldo_perdido DECIMAL(10, 2) DEFAULT 0.00 AFTER saldo_bloqueado,
-ADD COLUMN IF NOT EXISTS indicacoes_respondidas INT DEFAULT 0 AFTER total_indicacoes,
-ADD COLUMN IF NOT EXISTS indicacoes_convertidas INT DEFAULT 0 AFTER indicacoes_respondidas,
-ADD COLUMN IF NOT EXISTS cpf VARCHAR(14) AFTER email;
+-- Adicionar colunas faltantes na tabela indicadores (verificação manual de existência)
+SET @dbname = DATABASE();
+SET @tablename = "indicadores";
+
+-- Adicionar saldo_disponivel
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'saldo_disponivel';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN saldo_disponivel DECIMAL(10, 2) DEFAULT 0.00 AFTER total_comissoes', 
+    'SELECT "Coluna saldo_disponivel já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Adicionar saldo_bloqueado
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'saldo_bloqueado';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN saldo_bloqueado DECIMAL(10, 2) DEFAULT 0.00 AFTER saldo_disponivel', 
+    'SELECT "Coluna saldo_bloqueado já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Adicionar saldo_perdido
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'saldo_perdido';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN saldo_perdido DECIMAL(10, 2) DEFAULT 0.00 AFTER saldo_bloqueado', 
+    'SELECT "Coluna saldo_perdido já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Adicionar indicacoes_respondidas
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'indicacoes_respondidas';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN indicacoes_respondidas INT DEFAULT 0 AFTER total_indicacoes', 
+    'SELECT "Coluna indicacoes_respondidas já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Adicionar indicacoes_convertidas
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'indicacoes_convertidas';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN indicacoes_convertidas INT DEFAULT 0 AFTER indicacoes_respondidas', 
+    'SELECT "Coluna indicacoes_convertidas já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Adicionar cpf
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'cpf';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE indicadores ADD COLUMN cpf VARCHAR(14) AFTER email', 
+    'SELECT "Coluna cpf já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Criar índice para o CPF
-CREATE INDEX IF NOT EXISTS idx_cpf ON indicadores(cpf);
+SET @index_exists = 0;
+SELECT COUNT(*) INTO @index_exists FROM information_schema.statistics 
+WHERE table_schema = @dbname AND table_name = @tablename AND index_name = 'idx_cpf';
+SET @query = IF(@index_exists = 0, 
+    'CREATE INDEX idx_cpf ON indicadores(cpf)', 
+    'SELECT "Índice idx_cpf já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Criar tabela de saques_indicador
 CREATE TABLE IF NOT EXISTS saques_indicador (
@@ -28,12 +97,28 @@ CREATE TABLE IF NOT EXISTS saques_indicador (
     FOREIGN KEY (aprovado_por) REFERENCES consultores(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Adicionar coluna created_by na tabela consultores se não existir
-ALTER TABLE consultores 
-ADD COLUMN IF NOT EXISTS created_by VARCHAR(36) AFTER role;
+-- Adicionar coluna created_by na tabela consultores
+SET @tablename = "consultores";
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'created_by';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE consultores ADD COLUMN created_by VARCHAR(36) AFTER role', 
+    'SELECT "Coluna created_by já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Criar índice para created_by
-CREATE INDEX IF NOT EXISTS idx_created_by ON consultores(created_by);
+SET @index_exists = 0;
+SELECT COUNT(*) INTO @index_exists FROM information_schema.statistics 
+WHERE table_schema = @dbname AND table_name = @tablename AND index_name = 'idx_created_by';
+SET @query = IF(@index_exists = 0, 
+    'CREATE INDEX idx_created_by ON consultores(created_by)', 
+    'SELECT "Índice idx_created_by já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Ajustar ENUM de role para incluir os valores corretos
 ALTER TABLE consultores 
@@ -43,14 +128,36 @@ MODIFY COLUMN role ENUM('consultor', 'vendedor', 'admin', 'diretor', 'gerente', 
 ALTER TABLE leads 
 MODIFY COLUMN status ENUM('indicacao', 'novo', 'primeiro_contato', 'contato', 'qualificado', 'proposta', 'proposta_enviada', 'negociacao', 'aguardando', 'vistoria', 'ganho', 'convertido', 'nao_solicitado', 'perdido') DEFAULT 'novo';
 
--- Adicionar coluna indicador_id na tabela leads se não existir
-ALTER TABLE leads 
-ADD COLUMN IF NOT EXISTS indicador_id VARCHAR(36) AFTER consultor_id;
+-- Adicionar coluna indicador_id na tabela leads
+SET @tablename = "leads";
+SET @col_exists = 0;
+SELECT COUNT(*) INTO @col_exists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'indicador_id';
+SET @query = IF(@col_exists = 0, 
+    'ALTER TABLE leads ADD COLUMN indicador_id VARCHAR(36) AFTER consultor_id', 
+    'SELECT "Coluna indicador_id já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Criar índice para indicador_id
-CREATE INDEX IF NOT EXISTS idx_indicador ON leads(indicador_id);
+SET @index_exists = 0;
+SELECT COUNT(*) INTO @index_exists FROM information_schema.statistics 
+WHERE table_schema = @dbname AND table_name = @tablename AND index_name = 'idx_indicador';
+SET @query = IF(@index_exists = 0, 
+    'CREATE INDEX idx_indicador ON leads(indicador_id)', 
+    'SELECT "Índice idx_indicador já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Adicionar foreign key para indicador_id
-ALTER TABLE leads 
-ADD CONSTRAINT fk_leads_indicador 
-FOREIGN KEY (indicador_id) REFERENCES indicadores(id) ON DELETE SET NULL;
+SET @fk_exists = 0;
+SELECT COUNT(*) INTO @fk_exists FROM information_schema.table_constraints 
+WHERE table_schema = @dbname AND table_name = @tablename AND constraint_name = 'fk_leads_indicador';
+SET @query = IF(@fk_exists = 0, 
+    'ALTER TABLE leads ADD CONSTRAINT fk_leads_indicador FOREIGN KEY (indicador_id) REFERENCES indicadores(id) ON DELETE SET NULL', 
+    'SELECT "Foreign key fk_leads_indicador já existe"');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
