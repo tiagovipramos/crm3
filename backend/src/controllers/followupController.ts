@@ -55,10 +55,10 @@ export const listarSequencias = async (req: Request, res: Response) => {
     const [sequencias] = await pool.query<RowDataPacket[]>(
       `SELECT s.*, 
         COUNT(DISTINCT fl.id) as total_leads_ativos,
-        u.nome as criador_nome
+        c.nome as criador_nome
       FROM followup_sequencias s
       LEFT JOIN followup_leads fl ON s.id = fl.sequencia_id AND fl.status = 'ativo'
-      LEFT JOIN usuarios u ON s.criado_por = u.id
+      LEFT JOIN consultores c ON s.criado_por = c.id
       GROUP BY s.id
       ORDER BY s.prioridade DESC, s.criado_em DESC`
     );
