@@ -52,16 +52,40 @@ git pull origin main
 cat .env
 ```
 
-**IMPORTANTE:** Certifique-se que o arquivo `.env` na VPS contém:
-```env
-NEXT_PUBLIC_WS_URL=http://185.217.125.72:3001
+**⚠️ CRÍTICO:** O arquivo `.env` **NÃO vai pro Git** (está no .gitignore).
+
+**NA VPS, você DEVE criar o .env manualmente:**
+
+```bash
+# Opção 1: Copiar do template
+cp .env.vps .env
+
+# Opção 2: Criar manualmente
+cat > .env << 'EOF'
+# Banco de Dados MySQL
+DB_HOST=mysql
+DB_NAME=protecar_crm
+DB_USER=root
+DB_PASSWORD=Crm@VPS2025!Secure#ProdDB
+DB_PORT=3306
+
+# Backend
+PORT=3001
+NODE_ENV=production
+JWT_SECRET=vps-prod-jwt-secret-a9f8e7d6c5b4a3f2e1d0c9b8a7e6d5c4b3a2f1e0d9c8b7a6
+JWT_EXPIRES_IN=7d
+
+# Frontend
+FRONTEND_URL=http://185.217.125.72:3000
 NEXT_PUBLIC_API_URL=http://185.217.125.72:3001/api
+NEXT_PUBLIC_WS_URL=http://185.217.125.72:3001
+EOF
+
+# Verificar se foi criado corretamente
+cat .env
 ```
 
-Se não existir, copie de .env.vps:
-```bash
-cp .env.vps .env
-```
+**ATENÇÃO:** Sem o `.env` configurado, o frontend vai usar `localhost:3001` e NÃO VAI FUNCIONAR!
 
 ### 3. **Rebuild dos Containers Docker**
 
