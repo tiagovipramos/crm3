@@ -534,6 +534,16 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
     // Se houver consultores online, criar o lead automaticamente
     if (consultorId) {
 
+      // 🔍 DEBUG: Verificar valores antes de criar lead
+      console.log('🔍 [DEBUG] Criando lead com os seguintes dados:');
+      console.log('  - Nome:', nomeIndicado);
+      console.log('  - Telefone:', validacao.telefone);
+      console.log('  - Consultor ID:', consultorId);
+      console.log('  - Indicador ID:', indicadorId);
+      console.log('  - Indicador ID tipo:', typeof indicadorId);
+      console.log('  - Indicador ID é undefined?', indicadorId === undefined);
+      console.log('  - Indicador ID é null?', indicadorId === null);
+
       // Criar lead no CRM automaticamente no kanban "Indicação"
       const [leadResult] = await pool.query<ResultSetHeader>(
         `INSERT INTO leads (
