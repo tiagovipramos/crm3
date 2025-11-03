@@ -537,9 +537,9 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       // Criar lead no CRM automaticamente no kanban "Indicação"
       const [leadResult] = await pool.query<ResultSetHeader>(
         `INSERT INTO leads (
-          nome, telefone, origem, status, mensagens_nao_lidas, 
+          nome, telefone, origem, status, 
           consultor_id, indicador_id, indicacao_id, data_criacao, data_atualizacao
-        ) VALUES (?, ?, 'Indicação', 'indicacao', 0, ?, ?, ?, NOW(), NOW())`,
+        ) VALUES (?, ?, 'Indicação', 'indicacao', ?, ?, ?, NOW(), NOW())`,
         [nomeIndicado, validacao.telefone, consultorId, indicadorId, indicacao.id]
       );
 
