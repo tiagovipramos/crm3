@@ -74,68 +74,16 @@ export default function HeaderAdmin() {
       ],
     },
     {
-      id: 'funis',
-      label: 'Funis',
-      icon: GitBranch,
-      submenus: [
-        { view: 'funis-gestao' as ViewAdmin, label: 'Gerenciar Funis', icon: GitBranch },
-      ],
-    },
-    {
-      id: 'chat',
-      label: 'Chat',
-      icon: MessageSquare,
-      submenus: [
-        { view: 'chat-visao-geral' as ViewAdmin, label: 'Visão Geral', icon: MessageSquare },
-      ],
-    },
-    {
-      id: 'indicadores',
-      label: 'Indicadores',
-      icon: Users,
-      submenus: [
-        { view: 'indicadores-lista' as ViewAdmin, label: 'Listar Todos', icon: Users },
-      ],
-    },
-    {
-      id: 'relatorios',
-      label: 'Relatórios',
-      icon: BarChart3,
-      submenus: [
-        { view: 'relatorios-crm' as ViewAdmin, label: 'CRM', icon: BarChart3 },
-        { view: 'relatorios-indicacao' as ViewAdmin, label: 'Indicações', icon: DollarSign },
-      ],
-    },
-    {
       id: 'configuracoes',
       label: 'Configurações',
       icon: Settings,
       submenus: [
+        { view: 'funis-gestao' as ViewAdmin, label: 'Gerenciar Funis', icon: GitBranch },
         { view: 'configuracoes' as ViewAdmin, label: 'Sistema', icon: Settings },
         { view: 'configuracoes-indicador' as ViewAdmin, label: 'Indicadores', icon: DollarSign },
       ],
     },
-    {
-      id: 'auditoria',
-      label: 'Auditoria',
-      icon: FileText,
-      submenus: [
-        { view: 'auditoria' as ViewAdmin, label: 'Logs de Atividades', icon: FileText },
-      ],
-    },
   ];
-
-  // Adicionar menu Financeiro APENAS para Diretor
-  if (usuarioLogado?.role === 'diretor') {
-    allMenus.splice(5, 0, {
-      id: 'financeiro',
-      label: 'Financeiro',
-      icon: DollarSign,
-      submenus: [
-        { view: 'financeiro' as ViewAdmin, label: 'Gerenciar Saques', icon: DollarSign },
-      ],
-    });
-  }
 
   const menus = allMenus;
 
@@ -209,6 +157,19 @@ export default function HeaderAdmin() {
               );
             })}
             
+            {/* Botão Chat - Direto sem submenu */}
+            <button
+              onClick={() => handleViewChange('chat-visao-geral')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                currentView === 'chat-visao-geral'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-medium">Chat</span>
+            </button>
+            
             {/* Botão Usuários - Direto sem submenu */}
             <button
               onClick={() => handleViewChange('usuarios-lista')}
@@ -220,6 +181,34 @@ export default function HeaderAdmin() {
             >
               <Users className="w-4 h-4" />
               <span className="text-sm font-medium">Usuários</span>
+            </button>
+            
+            {/* Botão Financeiro - Direto sem submenu (APENAS para Diretor) */}
+            {usuarioLogado?.role === 'diretor' && (
+              <button
+                onClick={() => handleViewChange('financeiro')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  currentView === 'financeiro'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span className="text-sm font-medium">Financeiro</span>
+              </button>
+            )}
+            
+            {/* Botão Auditoria - Direto sem submenu */}
+            <button
+              onClick={() => handleViewChange('auditoria')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                currentView === 'auditoria'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span className="text-sm font-medium">Auditoria</span>
             </button>
           </nav>
 
