@@ -112,6 +112,7 @@ export default function HeaderAdmin() {
       icon: Settings,
       submenus: [
         { view: 'configuracoes' as ViewAdmin, label: 'Sistema', icon: Settings },
+        { view: 'configuracoes-indicador' as ViewAdmin, label: 'Indicadores', icon: DollarSign },
       ],
     },
     {

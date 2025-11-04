@@ -7,6 +7,7 @@ import UsuariosListView from '@/components/admin/views/UsuariosListView';
 import ChatVisaoGeralView from '@/components/admin/views/ChatVisaoGeralView';
 import FinanceiroView from '@/components/admin/views/FinanceiroView';
 import IndicadoresListView from '@/components/admin/views/IndicadoresListView';
+import ConfiguracoesAdminView from '@/components/admin/views/ConfiguracoesAdminView';
 
 export default function AdminPage() {
   const searchParams = useSearchParams();
@@ -29,6 +30,8 @@ export default function AdminPage() {
       case 'financeiro':
       case 'comissoes':
         return <FinanceiroView />;
+      case 'configuracoes-indicador':
+        return <ConfiguracoesAdminView />;
       default:
         return <DashboardCRMView />;
     }

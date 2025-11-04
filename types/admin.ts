@@ -207,6 +207,33 @@ export interface ConfiguracaoSistema {
   metaMensalFaturamento: number;
 }
 
+// Configurações de Comissão (nova)
+export interface ConfiguracoesComissao {
+  comissaoResposta: number;
+  comissaoVenda: number;
+}
+
+// Configurações de Lootbox (nova)
+export interface ConfiguracoesLootbox {
+  vendasNecessarias: number;
+  premioMinimo: number;
+  premioMaximo: number;
+  probabilidadeBaixo: number;
+  probabilidadeMedio: number;
+  probabilidadeAlto: number;
+}
+
+// Mensagem Automática (nova)
+export interface MensagemAutomatica {
+  id: number;
+  tipo: 'boas_vindas' | 'proposta' | 'conversao' | 'lootbox';
+  mensagem: string;
+  ativo: boolean;
+  ordem: number;
+  data_criacao?: string;
+  data_atualizacao?: string;
+}
+
 // View ativa no painel
 export type ViewAdmin = 
   | 'dashboard-crm'
@@ -222,4 +249,5 @@ export type ViewAdmin =
   | 'relatorios-indicacao'
   | 'financeiro'
   | 'configuracoes'
+  | 'configuracoes-indicador' // nova
   | 'auditoria';

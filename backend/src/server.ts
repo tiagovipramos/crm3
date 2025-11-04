@@ -19,6 +19,7 @@ import storageRoutes from './routes/storage';
 import followupRoutes from './routes/followup';
 import indicadorRoutes from './routes/indicador';
 import adminRoutes from './routes/admin';
+import configuracoesRoutes from './routes/configuracoes';
 
 dotenv.config();
 
@@ -173,6 +174,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/followup', followupRoutes);
 app.use('/api/indicador', indicadorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/configuracoes', configuracoesRoutes);
 
 // Disponibilizar Socket.IO globalmente para os services
 (global as any).io = io;
