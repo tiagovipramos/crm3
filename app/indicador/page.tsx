@@ -293,24 +293,13 @@ export default function IndicadorDashboardPage() {
           </div>
           
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            onClick={handleLogout}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors group"
+            title="Sair da Conta"
           >
-            <Menu className="w-6 h-6 text-white" />
+            <LogOut className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
           </button>
         </div>
-
-        {showMenu && (
-          <div className="absolute top-full right-4 mt-2 w-56 bg-white rounded-xl shadow-xl overflow-hidden animate-slideDown">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 transition-colors text-red-600 font-medium"
-            >
-              <LogOut className="w-5 h-5" />
-              Sair da Conta
-            </button>
-          </div>
-        )}
       </header>
 
       {sucesso && (
