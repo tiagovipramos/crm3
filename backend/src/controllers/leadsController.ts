@@ -354,7 +354,7 @@ export const updateLead = async (req: Request, res: Response) => {
             
             console.log('✅ Venda revertida com sucesso! R$ 15,00 removidos');
             
-          } else if (indicacao.status === 'respondeu' && novoStatus === 'novo') {
+          } else if (indicacao.status === 'respondeu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
             console.log('🔄 Revertendo liberação dos R$ 2,00 - Bloqueando novamente');
             
             // Bloquear saldo novamente
