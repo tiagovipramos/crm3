@@ -303,60 +303,6 @@ export default function IndicadorDashboardPage() {
         {showMenu && (
           <div className="absolute top-full right-4 mt-2 w-56 bg-white rounded-xl shadow-xl overflow-hidden animate-slideDown">
             <button
-              onClick={() => {
-                celebrate(2.00, 'Teste de celebração! 🎉');
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-green-50 transition-colors text-green-600 font-medium border-b"
-            >
-              <Award className="w-5 h-5" />
-              <span>🎉 Testar Celebração</span>
-            </button>
-            
-            <button
-              onClick={toggleSound}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-gray-700 font-medium border-b"
-            >
-              {soundEnabled ? (
-                <>
-                  <Volume2 className="w-5 h-5 text-green-600" />
-                  <span>Som Ativado</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-5 h-5 text-gray-400" />
-                  <span>Som Desativado</span>
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={async () => {
-                const granted = await requestNotificationPermission();
-                if (granted) {
-                  setNotificationPermission('granted');
-                  alert('✅ Notificações ativadas! Você receberá alertas quando ganhar comissões.');
-                } else {
-                  alert('❌ Permissão negada. Ative nas configurações do navegador.');
-                }
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-gray-700 font-medium border-b"
-            >
-              {notificationPermission === 'granted' ? (
-                <>
-                  <Bell className="w-5 h-5 text-blue-600" />
-                  <span>Notificações Ativas</span>
-                </>
-              ) : (
-                <>
-                  <BellOff className="w-5 h-5 text-gray-400" />
-                  <span>Ativar Notificações</span>
-                </>
-              )}
-            </button>
-            
-            <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 transition-colors text-red-600 font-medium"
             >

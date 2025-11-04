@@ -124,27 +124,12 @@ export default function LoginIndicadorPage() {
               )}
             </button>
           </form>
-
-          {/* Credenciais de Teste */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
-            <p className="text-xs text-blue-800 font-bold mb-2 flex items-center gap-1">
-              🧪 Credenciais de Teste
-            </p>
-            <div className="space-y-1">
-              <p className="text-xs text-blue-700 font-mono">
-                <span className="font-bold">Email:</span> joao@indicador.com
-              </p>
-              <p className="text-xs text-blue-700 font-mono">
-                <span className="font-bold">Senha:</span> 123456
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
         <div className="mt-8 text-center animate-fadeIn">
           <p className="text-white/80 text-sm font-medium">
-            © 2025 VIP CRM - Sistema de Indicações
+            © 2025 Conexão Leads - Sistema de Indicações
           </p>
         </div>
       </div>
