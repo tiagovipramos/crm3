@@ -282,7 +282,47 @@ export const updateLead = async (req: Request, res: Response) => {
             
             console.log('✅ Comissão de resposta liberada com sucesso!');
             
-          } else if (novoStatus === 'convertido' && indicacao.status !== 'converteu') {
+          } else if (novoStatus === 'convertido' && indicacao.status === 'enviado_crm') {
+            console.log('💰 Liberando R$ 2,00 E adicionando R$ 15,00 (direto para convertido)');
+            
+            // Liberar R$ 2,00 bloqueados E adicionar R$ 15,00 de venda
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel + 17.00,
+                   saldo_bloqueado = saldo_bloqueado - 2.00,
+                   indicacoes_respondidas = indicacoes_respondidas + 1,
+                   indicacoes_convertidas = indicacoes_convertidas + 1,
+                   vendas_para_proxima_caixa = vendas_para_proxima_caixa + 1
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'converteu',
+                   comissao_resposta = 2.00,
+                   comissao_venda = 15.00,
+                   data_resposta = NOW(),
+                   data_conversao = NOW()
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transação
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'credito', 17.00, saldo_disponivel - 17.00, saldo_disponivel,
+                'Comissão completa - R$ 2 liberados + R$ 15 de venda'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Comissão completa adicionada! R$ 17,00 total');
+            
+          } else if (novoStatus === 'convertido' && indicacao.status === 'respondeu') {
             console.log('💰 Adicionando R$ 15,00 de comissão de venda');
             
             // Adicionar comissão de venda
