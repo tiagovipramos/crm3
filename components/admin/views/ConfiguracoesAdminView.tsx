@@ -33,6 +33,7 @@ export default function ConfiguracoesAdminView() {
   
   // Estados para modals
   const [showAddMensagem, setShowAddMensagem] = useState(false);
+  const [showEditMensagem, setShowEditMensagem] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState<'boas_vindas' | 'proposta' | 'conversao' | 'lootbox'>('boas_vindas');
   const [novaMensagem, setNovaMensagem] = useState('');
   const [editandoMensagem, setEditandoMensagem] = useState<MensagemAutomatica | null>(null);
@@ -123,6 +124,32 @@ export default function ConfiguracoesAdminView() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao adicionar mensagem');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleEditMensagem = async () => {
+    if (!editandoMensagem || !editandoMensagem.mensagem.trim()) {
+      setError('Mensagem não pode estar vazia');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/configuracoes/mensagens/${editandoMensagem.id}`, {
+        mensagem: editandoMensagem.mensagem
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setSuccess('Mensagem editada com sucesso!');
+      setShowEditMensagem(false);
+      setEditandoMensagem(null);
+      fetchAllConfigs();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Erro ao editar mensagem');
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -467,13 +494,25 @@ export default function ConfiguracoesAdminView() {
                       )}
                     </div>
                     
-                    <button
-                      onClick={() => handleDeleteMensagem(msg.id)}
-                      className="text-red-600 hover:text-red-800 text-sm p-2 hover:bg-red-50 rounded transition-colors"
-                      title="Excluir mensagem"
-                    >
-                      🗑️
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditandoMensagem(msg);
+                          setShowEditMensagem(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-sm p-2 hover:bg-blue-50 rounded transition-colors"
+                        title="Editar mensagem"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMensagem(msg.id)}
+                        className="text-red-600 hover:text-red-800 text-sm p-2 hover:bg-red-50 rounded transition-colors"
+                        title="Excluir mensagem"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -518,6 +557,40 @@ export default function ConfiguracoesAdminView() {
                 onClick={() => {
                   setShowAddMensagem(false);
                   setNovaMensagem('');
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+              >
+                ❌ Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Mensagem */}
+      {showEditMensagem && editandoMensagem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+            <h3 className="text-xl font-bold mb-4">Editar Mensagem de Boas-Vindas</h3>
+            
+            <textarea
+              value={editandoMensagem.mensagem}
+              onChange={(e) => setEditandoMensagem({ ...editandoMensagem, mensagem: e.target.value })}
+              placeholder="Digite a mensagem automática..."
+              className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+            
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleEditMensagem}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                ✅ Salvar
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditMensagem(false);
+                  setEditandoMensagem(null);
                 }}
                 className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors font-medium"
               >

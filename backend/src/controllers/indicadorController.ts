@@ -604,10 +604,35 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
             );
             const indicadorNome = indicadorRows[0]?.nome || 'um parceiro';
 
-            // Montar mensagem personalizada
-            const mensagemBoasVindas = `Olá, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
+            // 🔍 Buscar mensagens de boas-vindas ativas do banco
+            const [mensagensRows] = await pool.query<RowDataPacket[]>(
+              `SELECT mensagem FROM mensagens_automaticas 
+               WHERE tipo = 'boas_vindas' AND ativo = true
+               ORDER BY RAND() LIMIT 1`
+            );
+
+            let mensagemBoasVindas = '';
+            
+            if (mensagensRows.length > 0) {
+              // ✅ Usar mensagem configurada e substituir variáveis
+              mensagemBoasVindas = mensagensRows[0].mensagem;
+              
+              // Substituir variáveis
+              mensagemBoasVindas = mensagemBoasVindas
+                .replace(/{nome_indicador}/g, indicadorNome)
+                .replace(/{nome_cliente}/g, nomeIndicado)
+                .replace(/{nome_vendedor}/g, consultorNome)
+                .replace(/{telefone_cliente}/g, validacao.telefone);
+              
+              console.log('✅ Usando mensagem configurada do banco de dados');
+            } else {
+              // ❌ Fallback para mensagem padrão se não houver mensagem configurada
+              mensagemBoasVindas = `Olá ${nomeIndicado}, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
+              console.log('⚠️ Nenhuma mensagem de boas-vindas configurada. Usando mensagem padrão.');
+            }
 
             console.log(`📤 Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
+            console.log(`📝 Mensagem: ${mensagemBoasVindas}`);
             console.log(`🆔 Lead ID para associar a mensagem: ${leadId}`);
             
             // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
