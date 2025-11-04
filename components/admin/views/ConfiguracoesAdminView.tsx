@@ -401,59 +401,96 @@ export default function ConfiguracoesAdminView() {
         </button>
       </div>
 
-      {/* CARD 3: MENSAGENS AUTOMÁTICAS */}
+      {/* CARD 3: MENSAGENS AUTOMÁTICAS DE BOAS-VINDAS */}
       <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
         <div className="flex items-center mb-4">
           <span className="text-3xl mr-3">📱</span>
-          <h2 className="text-2xl font-bold text-gray-800">Mensagens Automáticas</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Mensagens Automáticas de Boas-Vindas</h2>
         </div>
         <div className="h-1 bg-gradient-to-r from-green-500 to-teal-500 rounded mb-6"></div>
         
-        <div className="space-y-6">
-          {['boas_vindas', 'proposta', 'conversao', 'lootbox'].map((tipo) => (
-            <div key={tipo} className="border-l-4 border-blue-500 pl-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-lg text-gray-800">{getTipoLabel(tipo)}</h3>
-                <button
-                  onClick={() => {
-                    setTipoSelecionado(tipo as any);
-                    setShowAddMensagem(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-                >
-                  <span>➕</span> Adicionar
-                </button>
+        {/* Instruções de uso de variáveis */}
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r">
+          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <span>💡</span> Como usar variáveis nas mensagens:
+          </h3>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p>• <code className="bg-blue-100 px-2 py-0.5 rounded">{'{nome_indicador}'}</code> - Nome do indicador</p>
+            <p>• <code className="bg-blue-100 px-2 py-0.5 rounded">{'{nome_cliente}'}</code> - Nome do cliente/lead</p>
+            <p>• <code className="bg-blue-100 px-2 py-0.5 rounded">{'{nome_vendedor}'}</code> - Nome do vendedor</p>
+            <p>• <code className="bg-blue-100 px-2 py-0.5 rounded">{'{telefone_cliente}'}</code> - Telefone do cliente</p>
+            <p className="text-xs text-blue-700 mt-2 italic">Exemplo: "Olá {'{nome_cliente}'}, você foi indicado por {'{nome_indicador}'}!"</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="border-l-4 border-blue-500 pl-4">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h3 className="font-semibold text-lg text-gray-800">🎉 Mensagens de Boas-Vindas</h3>
+                <p className="text-sm text-gray-600">Crie múltiplas mensagens que serão alternadas aleatoriamente</p>
               </div>
-              
-              <div className="space-y-2">
-                {getMensagensPorTipo(tipo).length === 0 ? (
-                  <p className="text-gray-500 text-sm italic">Nenhuma mensagem cadastrada</p>
-                ) : (
-                  getMensagensPorTipo(tipo).map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <button
+                onClick={() => {
+                  setTipoSelecionado('boas_vindas');
+                  setShowAddMensagem(true);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+              >
+                <span>➕</span> Adicionar Mensagem
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {getMensagensPorTipo('boas_vindas').length === 0 ? (
+                <p className="text-gray-500 text-sm italic">Nenhuma mensagem cadastrada</p>
+              ) : (
+                getMensagensPorTipo('boas_vindas').map((msg, index) => (
+                  <div key={msg.id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">#{index + 1}</span>
                       <button
                         onClick={() => handleToggleMensagem(msg)}
-                        className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center ${msg.ativo ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${msg.ativo ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}
+                        title={msg.ativo ? 'Mensagem ativa' : 'Mensagem inativa'}
                       >
                         {msg.ativo && <span className="text-white text-xs">✓</span>}
                       </button>
-                      
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-800">{msg.mensagem}</p>
-                      </div>
-                      
-                      <button
-                        onClick={() => handleDeleteMensagem(msg.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        🗑️
-                      </button>
                     </div>
-                  ))
-                )}
-              </div>
+                    
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.mensagem}</p>
+                      {msg.ativo && (
+                        <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                          ✓ Ativa no rodízio
+                        </span>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDeleteMensagem(msg.id)}
+                      className="text-red-600 hover:text-red-800 text-sm p-2 hover:bg-red-50 rounded transition-colors"
+                      title="Excluir mensagem"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-          ))}
+
+            {getMensagensPorTipo('boas_vindas').length > 0 && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">Total de mensagens ativas:</span>{' '}
+                  {getMensagensPorTipo('boas_vindas').filter(m => m.ativo).length}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  As mensagens ativas serão alternadas aleatoriamente ao enviar para novos clientes
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
