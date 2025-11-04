@@ -30,6 +30,7 @@ export default function AdminPage() {
       case 'financeiro':
       case 'comissoes':
         return <FinanceiroView />;
+      case 'configuracoes':
       case 'configuracoes-indicador':
         return <ConfiguracoesAdminView />;
       default:
