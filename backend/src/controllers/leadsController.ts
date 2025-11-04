@@ -318,6 +318,46 @@ export const updateLead = async (req: Request, res: Response) => {
             
             console.log('✅ Comissão de venda adicionada com sucesso!');
             
+          } else if (indicacao.status === 'converteu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
+            console.log('🔄 Reversão COMPLETA - Removendo R$ 15,00 E bloqueando R$ 2,00');
+            
+            // Remover comissão de venda E bloquear R$ 2,00
+            await pool.query(
+              `UPDATE indicadores 
+               SET saldo_disponivel = saldo_disponivel - 17.00,
+                   saldo_bloqueado = saldo_bloqueado + 2.00,
+                   indicacoes_convertidas = indicacoes_convertidas - 1,
+                   indicacoes_respondidas = GREATEST(indicacoes_respondidas - 1, 0),
+                   vendas_para_proxima_caixa = GREATEST(vendas_para_proxima_caixa - 1, 0)
+               WHERE id = ?`,
+              [indicadorId]
+            );
+            
+            // Atualizar indicação para estado inicial
+            await pool.query(
+              `UPDATE indicacoes 
+               SET status = 'enviado_crm',
+                   comissao_venda = 0,
+                   comissao_resposta = 0,
+                   data_conversao = NULL,
+                   data_resposta = NULL
+               WHERE id = ?`,
+              [indicacao.id]
+            );
+            
+            // Registrar transações (duas: débito de R$ 15 e bloqueio de R$ 2)
+            await pool.query(
+              `INSERT INTO transacoes_indicador (
+                indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
+              ) SELECT 
+                ?, ?, 'debito', 17.00, saldo_disponivel + 17.00, saldo_disponivel,
+                'Reversão completa - R$ 15 removidos e R$ 2 bloqueados'
+               FROM indicadores WHERE id = ?`,
+              [indicadorId, indicacao.id, indicadorId]
+            );
+            
+            console.log('✅ Reversão completa! R$ 15 removidos + R$ 2 bloqueados');
+            
           } else if (indicacao.status === 'converteu' && novoStatus !== 'convertido') {
             console.log('🔄 Revertendo venda - Removendo R$ 15,00 de comissão');
             
