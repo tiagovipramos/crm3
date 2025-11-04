@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import HeaderAdminSimples from '@/components/admin/HeaderAdminSimples';
+import HeaderAdmin from '@/components/admin/HeaderAdmin';
 
 export default function AdminLayout({
   children,
@@ -70,7 +70,7 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <HeaderAdminSimples />
+      <HeaderAdmin />
       <main className="container mx-auto px-4 py-6">
         {children}
       </main>
