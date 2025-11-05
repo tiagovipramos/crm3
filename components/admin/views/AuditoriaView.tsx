@@ -117,7 +117,7 @@ const AuditoriaView: React.FC = () => {
       if (filtros.whatsappValidado) params.append('whatsappValidado', filtros.whatsappValidado);
       if (filtros.temComissao) params.append('temComissao', 'true');
 
-      const response = await fetch(`${API_URL}/api/auditoria?${params}`, {
+      const response = await fetch(`${API_URL}/auditoria?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -144,7 +144,7 @@ const AuditoriaView: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/api/auditoria/exportar?formato=csv`, {
+      const response = await fetch(`${API_URL}/auditoria/exportar?formato=csv`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
