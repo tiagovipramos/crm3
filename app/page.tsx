@@ -39,11 +39,6 @@ export default function LoginPage() {
     }
   };
 
-  const preencherDemo = (consultorEmail: string) => {
-    setEmail(consultorEmail);
-    setSenha('123456');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#075E54] to-[#128C7E] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -117,46 +112,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Contas de Demonstração */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center mb-3">
-              Contas de demonstração:
-            </p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => preencherDemo('carlos@protecar.com')}
-                className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition"
-              >
-                <div className="font-medium text-gray-800">Carlos Silva</div>
-                <div className="text-gray-500">carlos@protecar.com</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => preencherDemo('ana@protecar.com')}
-                className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition"
-              >
-                <div className="font-medium text-gray-800">Ana Paula</div>
-                <div className="text-gray-500">ana@protecar.com</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => preencherDemo('roberto@protecar.com')}
-                className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition"
-              >
-                <div className="font-medium text-gray-800">Roberto Lima</div>
-                <div className="text-gray-500">roberto@protecar.com</div>
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 text-center mt-3">
-              Senha para todas as contas: <span className="font-mono font-bold">123456</span>
-            </p>
-          </div>
         </div>
 
         {/* Rodapé */}
         <div className="text-center mt-6 text-white text-sm">
-          <p>© 2025 VIP CRM. Todos os direitos reservados.</p>
+          <p>© 2025 ConexãoLeads CRM. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>
