@@ -159,9 +159,9 @@ export default function HeaderAdmin() {
             
             {/* Botão Chat - Direto sem submenu */}
             <button
-              onClick={() => handleViewChange('chat-visao-geral')}
+              onClick={() => handleViewChange('chat')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                currentView === 'chat-visao-geral'
+                currentView === 'chat'
                   ? 'bg-blue-50 text-blue-600'
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
