@@ -99,6 +99,7 @@ const AuditoriaView: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       
       // Construir query string
       const params = new URLSearchParams({
@@ -116,7 +117,7 @@ const AuditoriaView: React.FC = () => {
       if (filtros.whatsappValidado) params.append('whatsappValidado', filtros.whatsappValidado);
       if (filtros.temComissao) params.append('temComissao', 'true');
 
-      const response = await fetch(`http://localhost:3001/api/auditoria?${params}`, {
+      const response = await fetch(`${API_URL}/api/auditoria?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -142,7 +143,8 @@ const AuditoriaView: React.FC = () => {
   const exportarCSV = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/auditoria/exportar?formato=csv', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/auditoria/exportar?formato=csv`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
