@@ -101,6 +101,9 @@ const AuditoriaView: React.FC = () => {
       const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       
+      console.log('[AUDITORIA] Token:', token ? `${token.substring(0, 20)}...` : 'NULL');
+      console.log('[AUDITORIA] API_URL:', API_URL);
+      
       // Construir query string
       const params = new URLSearchParams({
         limit: paginacao.limit.toString(),
