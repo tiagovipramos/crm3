@@ -9,6 +9,7 @@ import FinanceiroView from '@/components/admin/views/FinanceiroView';
 import IndicadoresListView from '@/components/admin/views/IndicadoresListView';
 import ConfiguracoesAdminView from '@/components/admin/views/ConfiguracoesAdminView';
 import AuditoriaView from '@/components/admin/views/AuditoriaView';
+import FunisGestaoView from '@/components/admin/views/FunisGestaoView';
 
 export default function AdminPage() {
   const searchParams = useSearchParams();
@@ -34,6 +35,8 @@ export default function AdminPage() {
       case 'configuracoes':
       case 'configuracoes-indicador':
         return <ConfiguracoesAdminView />;
+      case 'funis-gestao':
+        return <FunisGestaoView />;
       case 'auditoria':
         return <AuditoriaView />;
       default:
