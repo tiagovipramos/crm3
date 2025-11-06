@@ -18,12 +18,20 @@ export default function ConfiguracoesAdminView() {
   });
   
   const [lootbox, setLootbox] = useState<ConfiguracoesLootbox>({
-    vendasNecessarias: 10,
-    premioMinimo: 5.00,
-    premioMaximo: 50.00,
-    probabilidadeBaixo: 60,
-    probabilidadeMedio: 30,
-    probabilidadeAlto: 10
+    // Lootbox de Indicações
+    indicacoesNecessarias: 10,
+    premioMinimoIndicacoes: 5.00,
+    premioMaximoIndicacoes: 20.00,
+    probabilidadeBaixoIndicacoes: 60,
+    probabilidadeMedioIndicacoes: 30,
+    probabilidadeAltoIndicacoes: 10,
+    // Lootbox de Vendas
+    vendasNecessarias: 5,
+    premioMinimoVendas: 10.00,
+    premioMaximoVendas: 50.00,
+    probabilidadeBaixoVendas: 60,
+    probabilidadeMedioVendas: 30,
+    probabilidadeAltoVendas: 10
   });
   
   const [mensagens, setMensagens] = useState<MensagemAutomatica[]>([]);
@@ -80,9 +88,17 @@ export default function ConfiguracoesAdminView() {
   };
 
   const handleSaveLootbox = async () => {
-    const soma = lootbox.probabilidadeBaixo + lootbox.probabilidadeMedio + lootbox.probabilidadeAlto;
-    if (soma !== 100) {
-      setError('A soma das probabilidades deve ser 100%');
+    const somaIndicacoes = lootbox.probabilidadeBaixoIndicacoes + lootbox.probabilidadeMedioIndicacoes + lootbox.probabilidadeAltoIndicacoes;
+    const somaVendas = lootbox.probabilidadeBaixoVendas + lootbox.probabilidadeMedioVendas + lootbox.probabilidadeAltoVendas;
+    
+    if (somaIndicacoes !== 100) {
+      setError('A soma das probabilidades de indicações deve ser 100%');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    if (somaVendas !== 100) {
+      setError('A soma das probabilidades de vendas deve ser 100%');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -291,132 +307,275 @@ export default function ConfiguracoesAdminView() {
         </div>
         <div className="h-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded mb-6"></div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Vendas Necessárias
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={lootbox.vendasNecessarias}
-              onChange={(e) => setLootbox({ ...lootbox, vendasNecessarias: parseInt(e.target.value) || 1 })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-            />
-          </div>
+        {/* LOOTBOX DE VENDAS */}
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span>💰</span> Lootbox de Vendas (Conversões)
+          </h3>
           
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Prêmio Mínimo
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-gray-500">R$</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Vendas Necessárias
+              </label>
               <input
                 type="number"
-                step="0.01"
-                min="0"
-                value={lootbox.premioMinimo}
-                onChange={(e) => setLootbox({ ...lootbox, premioMinimo: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                min="1"
+                value={lootbox.vendasNecessarias}
+                onChange={(e) => setLootbox({ ...lootbox, vendasNecessarias: parseInt(e.target.value) || 1 })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Prêmio Mínimo
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={lootbox.premioMinimoVendas}
+                  onChange={(e) => setLootbox({ ...lootbox, premioMinimoVendas: parseFloat(e.target.value) || 0 })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Prêmio Máximo
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={lootbox.premioMaximoVendas}
+                  onChange={(e) => setLootbox({ ...lootbox, premioMaximoVendas: parseFloat(e.target.value) || 0 })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Prêmio Máximo
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-gray-500">R$</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={lootbox.premioMaximo}
-                onChange={(e) => setLootbox({ ...lootbox, premioMaximo: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              />
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-700">Probabilidades (total deve ser 100%)</h4>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Baixo ({lootbox.probabilidadeBaixoVendas}%)</label>
+                <span className="text-sm text-gray-500">R$ {lootbox.premioMinimoVendas.toFixed(2)} - R$ {((lootbox.premioMaximoVendas - lootbox.premioMinimoVendas) / 3 + lootbox.premioMinimoVendas).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeBaixoVendas}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeBaixoVendas: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-green-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeBaixoVendas}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Médio ({lootbox.probabilidadeMedioVendas}%)</label>
+                <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximoVendas - lootbox.premioMinimoVendas) / 3 + lootbox.premioMinimoVendas).toFixed(2)} - R$ {((lootbox.premioMaximoVendas - lootbox.premioMinimoVendas) * 2/3 + lootbox.premioMinimoVendas).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeMedioVendas}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeMedioVendas: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-yellow-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeMedioVendas}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Alto ({lootbox.probabilidadeAltoVendas}%)</label>
+                <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximoVendas - lootbox.premioMinimoVendas) * 2/3 + lootbox.premioMinimoVendas).toFixed(2)} - R$ {lootbox.premioMaximoVendas.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeAltoVendas}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeAltoVendas: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-red-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeAltoVendas}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">Total:</span>
+              <span className={`text-lg font-bold ${(lootbox.probabilidadeBaixoVendas + lootbox.probabilidadeMedioVendas + lootbox.probabilidadeAltoVendas) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                {lootbox.probabilidadeBaixoVendas + lootbox.probabilidadeMedioVendas + lootbox.probabilidadeAltoVendas}%
+              </span>
             </div>
           </div>
         </div>
-        
-        <div className="space-y-4">
-          <h3 className="font-semibold text-gray-700">Probabilidades (total deve ser 100%)</h3>
+
+        {/* LOOTBOX DE INDICAÇÕES */}
+        <div className="pt-6 border-t-2 border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span>📱</span> Lootbox de Indicações (Respostas)
+          </h3>
           
-          <div>
-            <div className="flex justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Baixo ({lootbox.probabilidadeBaixo}%)</label>
-              <span className="text-sm text-gray-500">R$ {lootbox.premioMinimo.toFixed(2)} - R$ {((lootbox.premioMaximo - lootbox.premioMinimo) / 3 + lootbox.premioMinimo).toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Indicações Necessárias
+              </label>
               <input
-                type="range"
-                min="0"
-                max="100"
-                value={lootbox.probabilidadeBaixo}
-                onChange={(e) => setLootbox({ ...lootbox, probabilidadeBaixo: parseInt(e.target.value) })}
-                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                type="number"
+                min="1"
+                value={lootbox.indicacoesNecessarias}
+                onChange={(e) => setLootbox({ ...lootbox, indicacoesNecessarias: parseInt(e.target.value) || 1 })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-green-500 h-full transition-all"
-                  style={{ width: `${lootbox.probabilidadeBaixo}%` }}
-                ></div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Prêmio Mínimo
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={lootbox.premioMinimoIndicacoes}
+                  onChange={(e) => setLootbox({ ...lootbox, premioMinimoIndicacoes: parseFloat(e.target.value) || 0 })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Prêmio Máximo
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={lootbox.premioMaximoIndicacoes}
+                  onChange={(e) => setLootbox({ ...lootbox, premioMaximoIndicacoes: parseFloat(e.target.value) || 0 })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
           </div>
           
-          <div>
-            <div className="flex justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Médio ({lootbox.probabilidadeMedio}%)</label>
-              <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximo - lootbox.premioMinimo) / 3 + lootbox.premioMinimo).toFixed(2)} - R$ {((lootbox.premioMaximo - lootbox.premioMinimo) * 2/3 + lootbox.premioMinimo).toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={lootbox.probabilidadeMedio}
-                onChange={(e) => setLootbox({ ...lootbox, probabilidadeMedio: parseInt(e.target.value) })}
-                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-yellow-500 h-full transition-all"
-                  style={{ width: `${lootbox.probabilidadeMedio}%` }}
-                ></div>
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-700">Probabilidades (total deve ser 100%)</h4>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Baixo ({lootbox.probabilidadeBaixoIndicacoes}%)</label>
+                <span className="text-sm text-gray-500">R$ {lootbox.premioMinimoIndicacoes.toFixed(2)} - R$ {((lootbox.premioMaximoIndicacoes - lootbox.premioMinimoIndicacoes) / 3 + lootbox.premioMinimoIndicacoes).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeBaixoIndicacoes}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeBaixoIndicacoes: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-green-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeBaixoIndicacoes}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div>
-            <div className="flex justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Alto ({lootbox.probabilidadeAlto}%)</label>
-              <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximo - lootbox.premioMinimo) * 2/3 + lootbox.premioMinimo).toFixed(2)} - R$ {lootbox.premioMaximo.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={lootbox.probabilidadeAlto}
-                onChange={(e) => setLootbox({ ...lootbox, probabilidadeAlto: parseInt(e.target.value) })}
-                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-red-500 h-full transition-all"
-                  style={{ width: `${lootbox.probabilidadeAlto}%` }}
-                ></div>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Médio ({lootbox.probabilidadeMedioIndicacoes}%)</label>
+                <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximoIndicacoes - lootbox.premioMinimoIndicacoes) / 3 + lootbox.premioMinimoIndicacoes).toFixed(2)} - R$ {((lootbox.premioMaximoIndicacoes - lootbox.premioMinimoIndicacoes) * 2/3 + lootbox.premioMinimoIndicacoes).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeMedioIndicacoes}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeMedioIndicacoes: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-yellow-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeMedioIndicacoes}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Total:</span>
-            <span className={`text-lg font-bold ${(lootbox.probabilidadeBaixo + lootbox.probabilidadeMedio + lootbox.probabilidadeAlto) === 100 ? 'text-green-600' : 'text-red-600'}`}>
-              {lootbox.probabilidadeBaixo + lootbox.probabilidadeMedio + lootbox.probabilidadeAlto}%
-            </span>
+            
+            <div>
+              <div className="flex justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Alto ({lootbox.probabilidadeAltoIndicacoes}%)</label>
+                <span className="text-sm text-gray-500">R$ {((lootbox.premioMaximoIndicacoes - lootbox.premioMinimoIndicacoes) * 2/3 + lootbox.premioMinimoIndicacoes).toFixed(2)} - R$ {lootbox.premioMaximoIndicacoes.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lootbox.probabilidadeAltoIndicacoes}
+                  onChange={(e) => setLootbox({ ...lootbox, probabilidadeAltoIndicacoes: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="w-32 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-red-500 h-full transition-all"
+                    style={{ width: `${lootbox.probabilidadeAltoIndicacoes}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">Total:</span>
+              <span className={`text-lg font-bold ${(lootbox.probabilidadeBaixoIndicacoes + lootbox.probabilidadeMedioIndicacoes + lootbox.probabilidadeAltoIndicacoes) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                {lootbox.probabilidadeBaixoIndicacoes + lootbox.probabilidadeMedioIndicacoes + lootbox.probabilidadeAltoIndicacoes}%
+              </span>
+            </div>
           </div>
         </div>
         
