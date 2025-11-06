@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
 import { 
   Plus, 
   Edit2, 
@@ -15,7 +16,8 @@ import {
   Unlock
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
 
 interface EtapaFunil {
   id: string;
@@ -36,6 +38,7 @@ export default function FunisGestaoView() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   // Cores predefinidas para escolha
   const coresPredefinidas = [
@@ -54,13 +57,74 @@ export default function FunisGestaoView() {
   // Carregar etapas do banco ao montar componente
   useEffect(() => {
     carregarEtapas();
+    
+    // Configurar Socket.IO
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+    
+    if (token && userId) {
+      const socketInstance = io(WS_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
+
+      socketInstance.on('connect', () => {
+        console.log('🔌 Socket.IO conectado (Funis)');
+        socketInstance.emit('join_consultor', userId);
+      });
+
+      // Ouvir eventos de atualização do funil
+      socketInstance.on('funil_etapa_criada', (novaEtapa: EtapaFunil) => {
+        console.log('📥 Nova etapa recebida via Socket.IO:', novaEtapa);
+        setEtapas(prev => {
+          // Verificar se a etapa já existe para evitar duplicatas
+          if (prev.some(e => e.id === novaEtapa.id)) {
+            return prev;
+          }
+          return [...prev, novaEtapa];
+        });
+        mostrarSucesso('Nova etapa adicionada!');
+      });
+
+      socketInstance.on('funil_etapa_atualizada', (etapaAtualizada: EtapaFunil) => {
+        console.log('📥 Etapa atualizada via Socket.IO:', etapaAtualizada);
+        setEtapas(prev => prev.map(e => e.id === etapaAtualizada.id ? etapaAtualizada : e));
+        mostrarSucesso('Etapa atualizada!');
+      });
+
+      socketInstance.on('funil_etapa_deletada', (data: { id: string }) => {
+        console.log('📥 Etapa deletada via Socket.IO:', data.id);
+        setEtapas(prev => prev.filter(e => e.id !== data.id));
+        mostrarSucesso('Etapa removida!');
+      });
+
+      socketInstance.on('funil_etapas_reordenadas', (etapasReordenadas: EtapaFunil[]) => {
+        console.log('📥 Etapas reordenadas via Socket.IO');
+        setEtapas(etapasReordenadas);
+        mostrarSucesso('Ordem atualizada!');
+      });
+
+      socketInstance.on('disconnect', () => {
+        console.log('🔌 Socket.IO desconectado (Funis)');
+      });
+
+      setSocket(socketInstance);
+
+      // Cleanup ao desmontar
+      return () => {
+        console.log('🔌 Desconectando Socket.IO (Funis)');
+        socketInstance.disconnect();
+      };
+    }
   }, []);
 
   const carregarEtapas = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/funis/etapas`, {
+      const response = await axios.get(`${API_URL}/funis/etapas`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEtapas(response.data);
@@ -91,7 +155,7 @@ export default function FunisGestaoView() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/api/funis/etapas`, {
+      const response = await axios.post(`${API_URL}/funis/etapas`, {
         nome: etapaNova.nome,
         cor: etapaNova.cor
       }, {
@@ -116,7 +180,7 @@ export default function FunisGestaoView() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/funis/etapas/${etapaEditando.id}`, {
+      const response = await axios.put(`${API_URL}/funis/etapas/${etapaEditando.id}`, {
         nome: etapaEditando.nome,
         cor: etapaEditando.cor
       }, {
@@ -150,7 +214,7 @@ export default function FunisGestaoView() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/funis/etapas/${etapa.id}`, {
+      await axios.delete(`${API_URL}/funis/etapas/${etapa.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -199,7 +263,7 @@ export default function FunisGestaoView() {
         ordem: index + 1
       }));
 
-      await axios.put(`${API_URL}/api/funis/etapas/reordenar`, {
+      await axios.put(`${API_URL}/funis/etapas/reordenar`, {
         etapas: etapasReordenadas
       }, {
         headers: { Authorization: `Bearer ${token}` }

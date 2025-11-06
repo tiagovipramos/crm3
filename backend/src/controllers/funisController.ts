@@ -108,7 +108,17 @@ export const createEtapa = async (req: Request, res: Response) => {
     );
 
     console.log('✅ Etapa criada com sucesso:', id);
-    res.status(201).json((newEtapaRows as any[])[0]);
+    
+    const novaEtapa = (newEtapaRows as any[])[0];
+    
+    // Emitir evento Socket.IO para atualização em tempo real
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`consultor_${consultorId}`).emit('funil_etapa_criada', novaEtapa);
+      console.log('📡 Evento Socket.IO emitido: funil_etapa_criada');
+    }
+    
+    res.status(201).json(novaEtapa);
   } catch (error) {
     console.error('❌ Erro ao criar etapa:', error);
     res.status(500).json({ error: 'Erro ao criar etapa' });
@@ -197,7 +207,17 @@ export const updateEtapa = async (req: Request, res: Response) => {
     );
 
     console.log('✅ Etapa atualizada com sucesso');
-    res.json((updatedRows as any[])[0]);
+    
+    const etapaAtualizada = (updatedRows as any[])[0];
+    
+    // Emitir evento Socket.IO para atualização em tempo real
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`consultor_${consultorId}`).emit('funil_etapa_atualizada', etapaAtualizada);
+      console.log('📡 Evento Socket.IO emitido: funil_etapa_atualizada');
+    }
+    
+    res.json(etapaAtualizada);
   } catch (error) {
     console.error('❌ Erro ao atualizar etapa:', error);
     res.status(500).json({ error: 'Erro ao atualizar etapa' });
@@ -248,6 +268,14 @@ export const deleteEtapa = async (req: Request, res: Response) => {
     );
 
     console.log('✅ Etapa deletada com sucesso');
+    
+    // Emitir evento Socket.IO para atualização em tempo real
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`consultor_${consultorId}`).emit('funil_etapa_deletada', { id });
+      console.log('📡 Evento Socket.IO emitido: funil_etapa_deletada');
+    }
+    
     res.json({ message: 'Etapa deletada com sucesso' });
   } catch (error) {
     console.error('❌ Erro ao deletar etapa:', error);
@@ -296,6 +324,14 @@ export const reordenarEtapas = async (req: Request, res: Response) => {
     );
 
     console.log('✅ Etapas reordenadas com sucesso');
+    
+    // Emitir evento Socket.IO para atualização em tempo real
+    const io = (req as any).app.get('io');
+    if (io) {
+      io.to(`consultor_${consultorId}`).emit('funil_etapas_reordenadas', updatedRows);
+      console.log('📡 Evento Socket.IO emitido: funil_etapas_reordenadas');
+    }
+    
     res.json(updatedRows);
   } catch (error) {
     console.error('❌ Erro ao reordenar etapas:', error);
