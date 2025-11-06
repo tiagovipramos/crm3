@@ -122,7 +122,7 @@ export const getTodasIndicacoes = async (req: Request, res: Response) => {
         l.nome as lead_nome,
         l.email as lead_email,
         l.status as lead_status,
-        l.valor_venda as lead_valor_venda,
+        l.valor_estimado as lead_valor_venda,
         c.id as consultor_id,
         c.nome as consultor_nome,
         c.email as consultor_email,
@@ -286,7 +286,7 @@ export const getIndicacaoDetalhada = async (req: Request, res: Response) => {
         l.email as lead_email,
         l.telefone as lead_telefone,
         l.status as lead_status,
-        l.valor_venda as lead_valor_venda,
+        l.valor_estimado as lead_valor_venda,
         l.origem as lead_origem,
         c.nome as consultor_nome,
         c.email as consultor_email,
@@ -417,7 +417,7 @@ export const exportarAuditoria = async (req: Request, res: Response) => {
         indic.telefone as indicador_telefone,
         l.nome as lead_nome,
         l.status as lead_status,
-        l.valor_venda as lead_valor_venda,
+        l.valor_estimado as lead_valor_venda,
         c.nome as consultor_nome
        FROM indicacoes ind
        INNER JOIN indicadores indic ON ind.indicador_id = indic.id
