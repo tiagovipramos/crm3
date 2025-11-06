@@ -20,13 +20,19 @@ async function executeMigration() {
     
     // Ler arquivo SQL
     const sqlPath = path.join(__dirname, 'migrations', '11-corrigir-configuracoes-lootbox.sql');
-    const sql = fs.readFileSync(sqlPath, 'utf8');
+    let sql = fs.readFileSync(sqlPath, 'utf8');
+    
+    // Remover comentários SQL (linhas que começam com --)
+    sql = sql
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
     
     // Dividir em statements individuais (MySQL não executa múltiplos statements de uma vez)
     const statements = sql
       .split(';')
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
     
     console.log(`📋 Executando ${statements.length} comandos SQL...`);
     
