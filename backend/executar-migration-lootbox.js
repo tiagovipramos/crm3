@@ -11,9 +11,9 @@ async function executeMigration() {
     // Criar conexão com MySQL
     connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'mysql',
-      user: process.env.DB_USER || 'admin',
-      password: process.env.DB_PASSWORD || 'senha_admin',
-      database: process.env.DB_NAME || 'crm_db'
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || 'root123',
+      database: process.env.DB_NAME || 'protecar_crm'
     });
     
     console.log('✅ Conectado ao banco de dados');
