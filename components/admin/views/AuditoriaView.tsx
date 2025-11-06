@@ -6,6 +6,7 @@ import {
   DollarSign, TrendingUp, CheckCircle, XCircle, Clock,
   AlertCircle, RefreshCw, ChevronDown, ChevronUp, Activity
 } from 'lucide-react';
+import { useAdminStore } from '@/store/useAdminStore';
 
 interface Indicacao {
   id: string;
@@ -64,6 +65,7 @@ interface Estatisticas {
 }
 
 const AuditoriaView: React.FC = () => {
+  const { token } = useAdminStore();
   const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
   const [estatisticas, setEstatisticas] = useState<Estatisticas | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,6 @@ const AuditoriaView: React.FC = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       
       console.log('[AUDITORIA] Token:', token ? `${token.substring(0, 20)}...` : 'NULL');
@@ -145,7 +146,6 @@ const AuditoriaView: React.FC = () => {
 
   const exportarCSV = async () => {
     try {
-      const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${API_URL}/auditoria/exportar?formato=csv`, {
         headers: {
