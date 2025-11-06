@@ -7,12 +7,16 @@ echo "🔄 Executando migration: Funis Admin Global"
 echo "==========================================="
 echo ""
 
-# Carregar variáveis de ambiente
-if [ -f .env ]; then
+# Carregar variáveis de ambiente (do diretório raiz do projeto)
+if [ -f ../.env ]; then
+    export $(cat ../.env | grep -v '^#' | xargs)
+    echo "✅ Variáveis de ambiente carregadas"
+elif [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
     echo "✅ Variáveis de ambiente carregadas"
 else
     echo "❌ Arquivo .env não encontrado!"
+    echo "   Procurado em: ../.env e .env"
     exit 1
 fi
 
