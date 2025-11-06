@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS etapas_funil (
 -- Inserir etapas padrão do sistema para cada consultor existente
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-novo') as id,
+    'novo' as id,
     id as consultor_id,
     'Novo' as nome,
     '#3B82F6' as cor,
@@ -38,7 +38,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-primeiro_contato') as id,
+    'primeiro_contato' as id,
     id as consultor_id,
     'Primeiro Contato' as nome,
     '#10B981' as cor,
@@ -52,7 +52,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-aguardando_retorno') as id,
+    'aguardando_retorno' as id,
     id as consultor_id,
     'Aguardando Retorno' as nome,
     '#F59E0B' as cor,
@@ -66,7 +66,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-vistoria_agendada') as id,
+    'vistoria_agendada' as id,
     id as consultor_id,
     'Vistoria Agendada' as nome,
     '#8B5CF6' as cor,
@@ -80,7 +80,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-proposta_enviada') as id,
+    'proposta_enviada' as id,
     id as consultor_id,
     'Proposta Enviada' as nome,
     '#EC4899' as cor,
@@ -94,7 +94,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-convertido') as id,
+    'convertido' as id,
     id as consultor_id,
     'Convertido' as nome,
     '#059669' as cor,
@@ -108,7 +108,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-perdido') as id,
+    'perdido' as id,
     id as consultor_id,
     'Perdido' as nome,
     '#EF4444' as cor,
@@ -122,7 +122,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO etapas_funil (id, consultor_id, nome, cor, ordem, sistema, ativo)
 SELECT 
-    CONCAT(UUID(), '-engano') as id,
+    'engano' as id,
     id as consultor_id,
     'Engano' as nome,
     '#6B7280' as cor,
