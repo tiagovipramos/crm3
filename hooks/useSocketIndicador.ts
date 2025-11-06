@@ -46,6 +46,21 @@ export function useSocketIndicador() {
       console.log('✅ Dashboard atualizado em tempo real!');
     });
 
+    // 🔥 Escutar atualização de configurações de lootbox
+    socket.on('configuracoes_lootbox_atualizadas', async (data: any) => {
+      console.log('⚙️ Configurações de lootbox atualizadas via Socket.IO:', data);
+      console.log('📊 Novas metas:', {
+        indicacoes: data.indicacoesNecessarias,
+        vendas: data.vendasNecessarias
+      });
+      
+      // Recarregar status da lootbox para refletir as novas configurações
+      const store = useIndicadorStore.getState();
+      console.log('🔄 Recarregando status da lootbox com novas configurações...');
+      await store.fetchLootBoxStatus();
+      console.log('✅ Lootbox atualizada em tempo real com novas metas!');
+    });
+
     // Tratar erros
     socket.on('error', (error: any) => {
       console.error('❌ Erro no Socket.IO (Indicador):', error);

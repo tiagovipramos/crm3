@@ -171,6 +171,31 @@ export const updateLootbox = async (req: Request, res: Response) => {
       ]
     );
     
+    // 🔥 EMITIR EVENTO SOCKET.IO PARA TODOS OS INDICADORES EM TEMPO REAL
+    const io = (global as any).io;
+    if (io) {
+      console.log('📡 Emitindo atualização de configurações de lootbox para todos os indicadores...');
+      
+      // Buscar todos os indicadores ativos
+      const [indicadoresRows] = await pool.query('SELECT id FROM indicadores WHERE ativo = true');
+      const indicadores = indicadoresRows as any[];
+      
+      // Emitir para cada indicador
+      indicadores.forEach((indicador: any) => {
+        io.to(`indicador_${indicador.id}`).emit('configuracoes_lootbox_atualizadas', {
+          indicacoesNecessarias,
+          vendasNecessarias,
+          premioMinimoIndicacoes: parseFloat(premioMinimoIndicacoes),
+          premioMaximoIndicacoes: parseFloat(premioMaximoIndicacoes),
+          premioMinimoVendas: parseFloat(premioMinimoVendas),
+          premioMaximoVendas: parseFloat(premioMaximoVendas),
+          timestamp: new Date().toISOString()
+        });
+      });
+      
+      console.log(`✅ Evento emitido para ${indicadores.length} indicadores`);
+    }
+    
     res.json({ 
       message: 'Configurações de lootbox atualizadas com sucesso',
       indicacoesNecessarias,
