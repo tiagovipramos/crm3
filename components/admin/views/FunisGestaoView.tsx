@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   Plus, 
   Edit2, 
@@ -14,6 +15,8 @@ import {
   Unlock
 } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 interface EtapaFunil {
   id: string;
   nome: string;
@@ -24,24 +27,15 @@ interface EtapaFunil {
 }
 
 export default function FunisGestaoView() {
-  // Estado inicial com etapas padrão
-  const [etapas, setEtapas] = useState<EtapaFunil[]>([
-    { id: 'novo', nome: 'Novo', cor: '#3B82F6', ordem: 1, sistema: true, totalLeads: 15 },
-    { id: 'primeiro_contato', nome: 'Primeiro Contato', cor: '#10B981', ordem: 2, sistema: true, totalLeads: 8 },
-    { id: 'aguardando_retorno', nome: 'Aguardando Retorno', cor: '#F59E0B', ordem: 3, sistema: false, totalLeads: 5 },
-    { id: 'vistoria_agendada', nome: 'Vistoria Agendada', cor: '#8B5CF6', ordem: 4, sistema: false, totalLeads: 3 },
-    { id: 'proposta_enviada', nome: 'Proposta Enviada', cor: '#EC4899', ordem: 5, sistema: false, totalLeads: 4 },
-    { id: 'convertido', nome: 'Convertido', cor: '#059669', ordem: 6, sistema: true, totalLeads: 12 },
-    { id: 'perdido', nome: 'Perdido', cor: '#EF4444', ordem: 7, sistema: true, totalLeads: 7 },
-    { id: 'engano', nome: 'Engano', cor: '#6B7280', ordem: 8, sistema: true, totalLeads: 2 },
-  ]);
-
+  // Estado inicial vazio - será carregado do banco
+  const [etapas, setEtapas] = useState<EtapaFunil[]>([]);
   const [etapaEditando, setEtapaEditando] = useState<EtapaFunil | null>(null);
   const [etapaNova, setEtapaNova] = useState<Partial<EtapaFunil> | null>(null);
   const [modalAberto, setModalAberto] = useState<'criar' | 'editar' | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   // Cores predefinidas para escolha
   const coresPredefinidas = [
@@ -57,6 +51,28 @@ export default function FunisGestaoView() {
     { nome: 'Indigo', valor: '#6366F1' },
   ];
 
+  // Carregar etapas do banco ao montar componente
+  useEffect(() => {
+    carregarEtapas();
+  }, []);
+
+  const carregarEtapas = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/funis/etapas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEtapas(response.data);
+      console.log('✅ Etapas carregadas:', response.data.length);
+    } catch (err: any) {
+      console.error('❌ Erro ao carregar etapas:', err);
+      mostrarErro('Erro ao carregar etapas do funil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const mostrarSucesso = (mensagem: string) => {
     setSuccess(mensagem);
     setTimeout(() => setSuccess(''), 3000);
@@ -67,52 +83,57 @@ export default function FunisGestaoView() {
     setTimeout(() => setError(''), 3000);
   };
 
-  const handleCriarEtapa = () => {
+  const handleCriarEtapa = async () => {
     if (!etapaNova?.nome || !etapaNova?.cor) {
       mostrarErro('Nome e cor são obrigatórios');
       return;
     }
 
-    // Validar nome duplicado
-    if (etapas.some(e => e.nome.toLowerCase() === (etapaNova.nome || '').toLowerCase())) {
-      mostrarErro('Já existe uma etapa com este nome');
-      return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/funis/etapas`, {
+        nome: etapaNova.nome,
+        cor: etapaNova.cor
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setEtapas([...etapas, response.data]);
+      setEtapaNova(null);
+      setModalAberto(null);
+      mostrarSucesso('Etapa criada com sucesso!');
+    } catch (err: any) {
+      console.error('❌ Erro ao criar etapa:', err);
+      mostrarErro(err.response?.data?.error || 'Erro ao criar etapa');
     }
-
-    const novaEtapa: EtapaFunil = {
-      id: (etapaNova.nome || '').toLowerCase().replace(/\s+/g, '_'),
-      nome: etapaNova.nome || '',
-      cor: etapaNova.cor || '#3B82F6',
-      ordem: etapas.length + 1,
-      sistema: false,
-      totalLeads: 0,
-    };
-
-    setEtapas([...etapas, novaEtapa]);
-    setEtapaNova(null);
-    setModalAberto(null);
-    mostrarSucesso('Etapa criada com sucesso!');
   };
 
-  const handleEditarEtapa = () => {
+  const handleEditarEtapa = async () => {
     if (!etapaEditando?.nome || !etapaEditando?.cor) {
       mostrarErro('Nome e cor são obrigatórios');
       return;
     }
 
-    // Validar nome duplicado (exceto a própria etapa)
-    if (etapas.some(e => e.id !== etapaEditando.id && e.nome.toLowerCase() === etapaEditando.nome.toLowerCase())) {
-      mostrarErro('Já existe uma etapa com este nome');
-      return;
-    }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API_URL}/api/funis/etapas/${etapaEditando.id}`, {
+        nome: etapaEditando.nome,
+        cor: etapaEditando.cor
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-    setEtapas(etapas.map(e => e.id === etapaEditando.id ? etapaEditando : e));
-    setEtapaEditando(null);
-    setModalAberto(null);
-    mostrarSucesso('Etapa atualizada com sucesso!');
+      setEtapas(etapas.map(e => e.id === etapaEditando.id ? response.data : e));
+      setEtapaEditando(null);
+      setModalAberto(null);
+      mostrarSucesso('Etapa atualizada com sucesso!');
+    } catch (err: any) {
+      console.error('❌ Erro ao editar etapa:', err);
+      mostrarErro(err.response?.data?.error || 'Erro ao atualizar etapa');
+    }
   };
 
-  const handleDeletarEtapa = (etapa: EtapaFunil) => {
+  const handleDeletarEtapa = async (etapa: EtapaFunil) => {
     if (etapa.sistema) {
       mostrarErro('Etapas do sistema não podem ser deletadas');
       return;
@@ -127,8 +148,18 @@ export default function FunisGestaoView() {
       return;
     }
 
-    setEtapas(etapas.filter(e => e.id !== etapa.id).map((e, index) => ({ ...e, ordem: index + 1 })));
-    mostrarSucesso('Etapa deletada com sucesso!');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/funis/etapas/${etapa.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setEtapas(etapas.filter(e => e.id !== etapa.id));
+      mostrarSucesso('Etapa deletada com sucesso!');
+    } catch (err: any) {
+      console.error('❌ Erro ao deletar etapa:', err);
+      mostrarErro(err.response?.data?.error || 'Erro ao deletar etapa');
+    }
   };
 
   // Drag and Drop handlers
@@ -157,14 +188,46 @@ export default function FunisGestaoView() {
     setDraggedIndex(index);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = async () => {
     setDraggedIndex(null);
-    mostrarSucesso('Ordem das etapas atualizada!');
+    
+    // Salvar nova ordem no backend
+    try {
+      const token = localStorage.getItem('token');
+      const etapasReordenadas = etapas.map((e, index) => ({
+        id: e.id,
+        ordem: index + 1
+      }));
+
+      await axios.put(`${API_URL}/api/funis/etapas/reordenar`, {
+        etapas: etapasReordenadas
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      mostrarSucesso('Ordem das etapas atualizada!');
+    } catch (err: any) {
+      console.error('❌ Erro ao reordenar etapas:', err);
+      mostrarErro('Erro ao salvar nova ordem das etapas');
+      // Recarregar etapas em caso de erro
+      carregarEtapas();
+    }
   };
 
   const getTotalLeads = () => {
     return etapas.reduce((acc, etapa) => acc + (etapa.totalLeads || 0), 0);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando etapas do funil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
