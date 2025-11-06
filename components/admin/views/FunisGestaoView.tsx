@@ -74,7 +74,7 @@ export default function FunisGestaoView() {
     }
 
     // Validar nome duplicado
-    if (etapas.some(e => e.nome.toLowerCase() === etapaNova.nome.toLowerCase())) {
+    if (etapas.some(e => e.nome.toLowerCase() === (etapaNova.nome || '').toLowerCase())) {
       mostrarErro('Já existe uma etapa com este nome');
       return;
     }
