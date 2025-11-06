@@ -471,14 +471,20 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
 
     const indicacao = indicacaoRows[0];
 
-    // Bloquear comissão de R$ 2,00 e incrementar contador de leads para loot box
+    // Buscar valor da comissão de resposta configurada
+    const [comissaoRows] = await pool.query<RowDataPacket[]>(
+      'SELECT comissao_resposta FROM configuracoes_comissao LIMIT 1'
+    );
+    const comissaoResposta = parseFloat(comissaoRows[0]?.comissao_resposta || 2.00);
+
+    // Bloquear comissão e incrementar contador de leads para loot box
     await pool.query(
       `UPDATE indicadores 
-       SET saldo_bloqueado = saldo_bloqueado + 2.00,
+       SET saldo_bloqueado = saldo_bloqueado + ?,
            total_indicacoes = total_indicacoes + 1,
            leads_para_proxima_caixa = leads_para_proxima_caixa + 1
        WHERE id = ?`,
-      [indicadorId]
+      [comissaoResposta, indicadorId]
     );
 
     // Registrar transação de bloqueio
@@ -486,10 +492,10 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       `INSERT INTO transacoes_indicador (
         indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
       ) SELECT 
-        ?, ?, 'bloqueio', 2.00, saldo_bloqueado - 2.00, saldo_bloqueado,
+        ?, ?, 'bloqueio', ?, saldo_bloqueado - ?, saldo_bloqueado,
         'Comissão bloqueada aguardando resposta do lead'
        FROM indicadores WHERE id = ?`,
-      [indicadorId, indicacao.id, indicadorId]
+      [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
     );
 
     // 🎯 ALGORITMO ROUND ROBIN: Buscar apenas consultores com WhatsApp conectado
@@ -1004,6 +1010,15 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
   try {
     const indicadorId = req.indicadorId;
 
+    // Buscar configurações de lootbox
+    const [configRows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM configuracoes_lootbox LIMIT 1'
+    );
+    const config = configRows[0];
+    
+    const indicacoesNecessarias = config?.indicacoes_necessarias || 10;
+    const vendasNecessarias = config?.vendas_necessarias || 5;
+
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT 
         leads_para_proxima_caixa, 
@@ -1030,15 +1045,15 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
     res.json({
       // Loot box de leads/indicações
       leadsParaProximaCaixa: indicador.leads_para_proxima_caixa || 0,
-      leadsNecessarios: 10,
-      podeAbrirIndicacoes: (indicador.leads_para_proxima_caixa || 0) >= 10,
+      leadsNecessarios: indicacoesNecessarias,
+      podeAbrirIndicacoes: (indicador.leads_para_proxima_caixa || 0) >= indicacoesNecessarias,
       totalCaixasAbertas: indicador.total_caixas_abertas || 0,
       totalGanhoCaixas: parseFloat(indicador.total_ganho_caixas || 0),
       
       // Loot box de vendas
       vendasParaProximaCaixa: indicador.vendas_para_proxima_caixa || 0,
-      vendasNecessarias: 5,
-      podeAbrirVendas: (indicador.vendas_para_proxima_caixa || 0) >= 5,
+      vendasNecessarias: vendasNecessarias,
+      podeAbrirVendas: (indicador.vendas_para_proxima_caixa || 0) >= vendasNecessarias,
       totalCaixasVendasAbertas: indicador.total_caixas_vendas_abertas || 0,
       totalGanhoCaixasVendas: parseFloat(indicador.total_ganho_caixas_vendas || 0),
       
@@ -1046,7 +1061,7 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
       historico: historico,
       
       // Compatibilidade com código antigo
-      podeAbrir: (indicador.leads_para_proxima_caixa || 0) >= 10
+      podeAbrir: (indicador.leads_para_proxima_caixa || 0) >= indicacoesNecessarias
     });
   } catch (error) {
     console.error('Erro ao buscar status da loot box:', error);
@@ -1060,6 +1075,19 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
 export const abrirLootBox = async (req: IndicadorAuthRequest, res: Response) => {
   try {
     const indicadorId = req.indicadorId;
+
+    // Buscar configurações de lootbox
+    const [configRows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM configuracoes_lootbox LIMIT 1'
+    );
+    const config = configRows[0];
+    
+    const indicacoesNecessarias = config?.indicacoes_necessarias || 10;
+    const premioMinimo = parseFloat(config?.premio_minimo_indicacoes || 5.00);
+    const premioMaximo = parseFloat(config?.premio_maximo_indicacoes || 20.00);
+    const probBaixo = config?.probabilidade_baixo_indicacoes || 60;
+    const probMedio = config?.probabilidade_medio_indicacoes || 30;
+    const probAlto = config?.probabilidade_alto_indicacoes || 10;
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT leads_para_proxima_caixa, saldo_disponivel
@@ -1076,32 +1104,48 @@ export const abrirLootBox = async (req: IndicadorAuthRequest, res: Response) => 
     const indicador = rows[0];
     const leadsParaProximaCaixa = indicador.leads_para_proxima_caixa || 0;
 
-    if (leadsParaProximaCaixa < 10) {
+    if (leadsParaProximaCaixa < indicacoesNecessarias) {
       return res.status(400).json({ 
         error: 'Leads insuficientes',
-        message: `Você precisa de ${10 - leadsParaProximaCaixa} leads para abrir uma caixa`
+        message: `Você precisa de ${indicacoesNecessarias - leadsParaProximaCaixa} leads para abrir uma caixa`
       });
     }
 
-    const premioValor = Math.random() * 50 + 10;
+    // Algoritmo de probabilidades
+    const rand = Math.random() * 100;
+    let premioValor: number;
+    const faixaValor = premioMaximo - premioMinimo;
+    
+    if (rand < probBaixo) {
+      // Prêmio baixo (primeira faixa)
+      premioValor = Math.random() * (faixaValor / 3) + premioMinimo;
+    } else if (rand < probBaixo + probMedio) {
+      // Prêmio médio (segunda faixa)
+      premioValor = Math.random() * (faixaValor / 3) + premioMinimo + (faixaValor / 3);
+    } else {
+      // Prêmio alto (terceira faixa)
+      premioValor = Math.random() * (faixaValor / 3) + premioMinimo + (faixaValor * 2/3);
+    }
+
+    premioValor = parseFloat(premioValor.toFixed(2));
 
     await pool.query(
       `UPDATE indicadores 
        SET saldo_disponivel = saldo_disponivel + ?,
-           leads_para_proxima_caixa = leads_para_proxima_caixa - 10,
+           leads_para_proxima_caixa = leads_para_proxima_caixa - ?,
            total_caixas_abertas = total_caixas_abertas + 1,
            total_ganho_caixas = total_ganho_caixas + ?
        WHERE id = ?`,
-      [premioValor, premioValor, indicadorId]
+      [premioValor, indicacoesNecessarias, premioValor, indicadorId]
     );
 
     res.json({
       success: true,
       premio: {
-        valor: parseFloat(premioValor.toFixed(2))
+        valor: premioValor
       },
       novoSaldo: parseFloat(indicador.saldo_disponivel) + premioValor,
-      leadsRestantes: leadsParaProximaCaixa - 10
+      leadsRestantes: leadsParaProximaCaixa - indicacoesNecessarias
     });
   } catch (error) {
     console.error('Erro ao abrir loot box:', error);

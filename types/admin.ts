@@ -215,12 +215,21 @@ export interface ConfiguracoesComissao {
 
 // Configurações de Lootbox (nova)
 export interface ConfiguracoesLootbox {
+  // Lootbox de Indicações (respostas)
+  indicacoesNecessarias: number;
+  premioMinimoIndicacoes: number;
+  premioMaximoIndicacoes: number;
+  probabilidadeBaixoIndicacoes: number;
+  probabilidadeMedioIndicacoes: number;
+  probabilidadeAltoIndicacoes: number;
+  
+  // Lootbox de Vendas (conversões)
   vendasNecessarias: number;
-  premioMinimo: number;
-  premioMaximo: number;
-  probabilidadeBaixo: number;
-  probabilidadeMedio: number;
-  probabilidadeAlto: number;
+  premioMinimoVendas: number;
+  premioMaximoVendas: number;
+  probabilidadeBaixoVendas: number;
+  probabilidadeMedioVendas: number;
+  probabilidadeAltoVendas: number;
 }
 
 // Mensagem Automática (nova)

@@ -68,12 +68,21 @@ export const getLootbox = async (req: Request, res: Response) => {
     }
     
     res.json({
+      // Lootbox de Indicações
+      indicacoesNecessarias: lootbox.indicacoes_necessarias,
+      premioMinimoIndicacoes: parseFloat(lootbox.premio_minimo_indicacoes),
+      premioMaximoIndicacoes: parseFloat(lootbox.premio_maximo_indicacoes),
+      probabilidadeBaixoIndicacoes: lootbox.probabilidade_baixo_indicacoes,
+      probabilidadeMedioIndicacoes: lootbox.probabilidade_medio_indicacoes,
+      probabilidadeAltoIndicacoes: lootbox.probabilidade_alto_indicacoes,
+      
+      // Lootbox de Vendas
       vendasNecessarias: lootbox.vendas_necessarias,
-      premioMinimo: parseFloat(lootbox.premio_minimo),
-      premioMaximo: parseFloat(lootbox.premio_maximo),
-      probabilidadeBaixo: lootbox.probabilidade_baixo,
-      probabilidadeMedio: lootbox.probabilidade_medio,
-      probabilidadeAlto: lootbox.probabilidade_alto
+      premioMinimoVendas: parseFloat(lootbox.premio_minimo_vendas),
+      premioMaximoVendas: parseFloat(lootbox.premio_maximo_vendas),
+      probabilidadeBaixoVendas: lootbox.probabilidade_baixo_vendas,
+      probabilidadeMedioVendas: lootbox.probabilidade_medio_vendas,
+      probabilidadeAltoVendas: lootbox.probabilidade_alto_vendas
     });
   } catch (error) {
     console.error('Erro ao buscar lootbox:', error);
@@ -84,53 +93,98 @@ export const getLootbox = async (req: Request, res: Response) => {
 export const updateLootbox = async (req: Request, res: Response) => {
   try {
     const { 
+      // Lootbox de Indicações
+      indicacoesNecessarias,
+      premioMinimoIndicacoes,
+      premioMaximoIndicacoes,
+      probabilidadeBaixoIndicacoes,
+      probabilidadeMedioIndicacoes,
+      probabilidadeAltoIndicacoes,
+      
+      // Lootbox de Vendas
       vendasNecessarias, 
-      premioMinimo, 
-      premioMaximo, 
-      probabilidadeBaixo, 
-      probabilidadeMedio, 
-      probabilidadeAlto 
+      premioMinimoVendas, 
+      premioMaximoVendas, 
+      probabilidadeBaixoVendas, 
+      probabilidadeMedioVendas, 
+      probabilidadeAltoVendas
     } = req.body;
     
-    // Validações
-    if (!vendasNecessarias || !premioMinimo || !premioMaximo || 
-        probabilidadeBaixo === undefined || probabilidadeMedio === undefined || probabilidadeAlto === undefined) {
-      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    // Validações - Indicações
+    if (!indicacoesNecessarias || !premioMinimoIndicacoes || !premioMaximoIndicacoes || 
+        probabilidadeBaixoIndicacoes === undefined || probabilidadeMedioIndicacoes === undefined || probabilidadeAltoIndicacoes === undefined) {
+      return res.status(400).json({ error: 'Todos os campos de indicações são obrigatórios' });
+    }
+    
+    // Validações - Vendas
+    if (!vendasNecessarias || !premioMinimoVendas || !premioMaximoVendas || 
+        probabilidadeBaixoVendas === undefined || probabilidadeMedioVendas === undefined || probabilidadeAltoVendas === undefined) {
+      return res.status(400).json({ error: 'Todos os campos de vendas são obrigatórios' });
+    }
+    
+    if (indicacoesNecessarias < 1) {
+      return res.status(400).json({ error: 'Indicações necessárias deve ser no mínimo 1' });
     }
     
     if (vendasNecessarias < 1) {
       return res.status(400).json({ error: 'Vendas necessárias deve ser no mínimo 1' });
     }
     
-    if (premioMinimo < 0 || premioMaximo < 0) {
-      return res.status(400).json({ error: 'Prêmios não podem ser negativos' });
+    if (premioMinimoIndicacoes < 0 || premioMaximoIndicacoes < 0) {
+      return res.status(400).json({ error: 'Prêmios de indicações não podem ser negativos' });
     }
     
-    if (premioMinimo >= premioMaximo) {
-      return res.status(400).json({ error: 'Prêmio mínimo deve ser menor que o máximo' });
+    if (premioMinimoVendas < 0 || premioMaximoVendas < 0) {
+      return res.status(400).json({ error: 'Prêmios de vendas não podem ser negativos' });
     }
     
-    const somaProbabilidades = probabilidadeBaixo + probabilidadeMedio + probabilidadeAlto;
-    if (somaProbabilidades !== 100) {
-      return res.status(400).json({ error: 'Soma das probabilidades deve ser 100%' });
+    if (premioMinimoIndicacoes >= premioMaximoIndicacoes) {
+      return res.status(400).json({ error: 'Prêmio mínimo de indicações deve ser menor que o máximo' });
+    }
+    
+    if (premioMinimoVendas >= premioMaximoVendas) {
+      return res.status(400).json({ error: 'Prêmio mínimo de vendas deve ser menor que o máximo' });
+    }
+    
+    const somaProbabilidadesIndicacoes = probabilidadeBaixoIndicacoes + probabilidadeMedioIndicacoes + probabilidadeAltoIndicacoes;
+    if (somaProbabilidadesIndicacoes !== 100) {
+      return res.status(400).json({ error: 'Soma das probabilidades de indicações deve ser 100%' });
+    }
+    
+    const somaProbabilidadesVendas = probabilidadeBaixoVendas + probabilidadeMedioVendas + probabilidadeAltoVendas;
+    if (somaProbabilidadesVendas !== 100) {
+      return res.status(400).json({ error: 'Soma das probabilidades de vendas deve ser 100%' });
     }
     
     await pool.query(
       `UPDATE configuracoes_lootbox 
-       SET vendas_necessarias = ?, premio_minimo = ?, premio_maximo = ?,
-           probabilidade_baixo = ?, probabilidade_medio = ?, probabilidade_alto = ?
+       SET indicacoes_necessarias = ?, premio_minimo_indicacoes = ?, premio_maximo_indicacoes = ?,
+           probabilidade_baixo_indicacoes = ?, probabilidade_medio_indicacoes = ?, probabilidade_alto_indicacoes = ?,
+           vendas_necessarias = ?, premio_minimo_vendas = ?, premio_maximo_vendas = ?,
+           probabilidade_baixo_vendas = ?, probabilidade_medio_vendas = ?, probabilidade_alto_vendas = ?
        WHERE id = 1`,
-      [vendasNecessarias, premioMinimo, premioMaximo, probabilidadeBaixo, probabilidadeMedio, probabilidadeAlto]
+      [
+        indicacoesNecessarias, premioMinimoIndicacoes, premioMaximoIndicacoes,
+        probabilidadeBaixoIndicacoes, probabilidadeMedioIndicacoes, probabilidadeAltoIndicacoes,
+        vendasNecessarias, premioMinimoVendas, premioMaximoVendas,
+        probabilidadeBaixoVendas, probabilidadeMedioVendas, probabilidadeAltoVendas
+      ]
     );
     
     res.json({ 
       message: 'Configurações de lootbox atualizadas com sucesso',
+      indicacoesNecessarias,
+      premioMinimoIndicacoes: parseFloat(premioMinimoIndicacoes),
+      premioMaximoIndicacoes: parseFloat(premioMaximoIndicacoes),
+      probabilidadeBaixoIndicacoes,
+      probabilidadeMedioIndicacoes,
+      probabilidadeAltoIndicacoes,
       vendasNecessarias,
-      premioMinimo: parseFloat(premioMinimo),
-      premioMaximo: parseFloat(premioMaximo),
-      probabilidadeBaixo,
-      probabilidadeMedio,
-      probabilidadeAlto
+      premioMinimoVendas: parseFloat(premioMinimoVendas),
+      premioMaximoVendas: parseFloat(premioMaximoVendas),
+      probabilidadeBaixoVendas,
+      probabilidadeMedioVendas,
+      probabilidadeAltoVendas
     });
   } catch (error) {
     console.error('Erro ao atualizar lootbox:', error);

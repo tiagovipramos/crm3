@@ -166,6 +166,15 @@ export const updateLead = async (req: Request, res: Response) => {
     console.log('📝 Dados recebidos do frontend:', JSON.stringify(updates, null, 2));
     console.log('📊 Campos recebidos:', Object.keys(updates));
 
+    // Buscar configurações de comissão do banco
+    const [comissaoRows] = await pool.query(
+      'SELECT comissao_resposta, comissao_venda FROM configuracoes_comissao LIMIT 1'
+    );
+    const comissaoConfig = (comissaoRows as any[])[0];
+    const comissaoResposta = parseFloat(comissaoConfig?.comissao_resposta || 2.00);
+    const comissaoVenda = parseFloat(comissaoConfig?.comissao_venda || 15.00);
+    const comissaoTotal = comissaoResposta + comissaoVenda;
+
     // Verificar se o lead pertence ao consultor
     const [checkRows] = await pool.query(
       'SELECT id FROM leads WHERE id = ? AND consultor_id = ?',
@@ -247,26 +256,26 @@ export const updateLead = async (req: Request, res: Response) => {
           
           // Aplicar regras de comissão baseadas no status
           if ((novoStatus === 'primeiro_contato' || novoStatus === 'proposta_enviada') && indicacao.status === 'enviado_crm') {
-            console.log('💰 Liberando R$ 2,00 bloqueados (primeiro contato/proposta enviada)');
+            console.log(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} bloqueados (primeiro contato/proposta enviada)`);
             
             // Liberar saldo bloqueado
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel + 2.00,
-                   saldo_bloqueado = saldo_bloqueado - 2.00,
+               SET saldo_disponivel = saldo_disponivel + ?,
+                   saldo_bloqueado = saldo_bloqueado - ?,
                    indicacoes_respondidas = indicacoes_respondidas + 1
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoResposta, comissaoResposta, indicadorId]
             );
             
             // Atualizar indicação
             await pool.query(
               `UPDATE indicacoes 
                SET status = 'respondeu',
-                   comissao_resposta = 2.00,
+                   comissao_resposta = ?,
                    data_resposta = NOW()
                WHERE id = ?`,
-              [indicacao.id]
+              [comissaoResposta, indicacao.id]
             );
             
             // Registrar transação
@@ -274,39 +283,39 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'desbloqueio', 2.00, saldo_disponivel - 2.00, saldo_disponivel,
+                ?, ?, 'desbloqueio', ?, saldo_disponivel - ?, saldo_disponivel,
                 'Comissão liberada - Lead respondeu'
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
             console.log('✅ Comissão de resposta liberada com sucesso!');
             
           } else if (novoStatus === 'convertido' && indicacao.status === 'enviado_crm') {
-            console.log('💰 Liberando R$ 2,00 E adicionando R$ 15,00 (direto para convertido)');
+            console.log(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} E adicionando R$ ${comissaoVenda.toFixed(2)} (direto para convertido)`);
             
-            // Liberar R$ 2,00 bloqueados E adicionar R$ 15,00 de venda
+            // Liberar comissão de resposta bloqueada E adicionar comissão de venda
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel + 17.00,
-                   saldo_bloqueado = saldo_bloqueado - 2.00,
+               SET saldo_disponivel = saldo_disponivel + ?,
+                   saldo_bloqueado = saldo_bloqueado - ?,
                    indicacoes_respondidas = indicacoes_respondidas + 1,
                    indicacoes_convertidas = indicacoes_convertidas + 1,
                    vendas_para_proxima_caixa = vendas_para_proxima_caixa + 1
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoTotal, comissaoResposta, indicadorId]
             );
             
             // Atualizar indicação
             await pool.query(
               `UPDATE indicacoes 
                SET status = 'converteu',
-                   comissao_resposta = 2.00,
-                   comissao_venda = 15.00,
+                   comissao_resposta = ?,
+                   comissao_venda = ?,
                    data_resposta = NOW(),
                    data_conversao = NOW()
                WHERE id = ?`,
-              [indicacao.id]
+              [comissaoResposta, comissaoVenda, indicacao.id]
             );
             
             // Registrar transação
@@ -314,35 +323,35 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'credito', 17.00, saldo_disponivel - 17.00, saldo_disponivel,
-                'Comissão completa - R$ 2 liberados + R$ 15 de venda'
+                ?, ?, 'credito', ?, saldo_disponivel - ?, saldo_disponivel,
+                CONCAT('Comissão completa - R$ ', ?, ' liberados + R$ ', ?, ' de venda')
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoTotal, comissaoTotal, comissaoResposta, comissaoVenda, indicadorId]
             );
             
-            console.log('✅ Comissão completa adicionada! R$ 17,00 total');
+            console.log(`✅ Comissão completa adicionada! R$ ${comissaoTotal.toFixed(2)} total`);
             
           } else if (novoStatus === 'convertido' && indicacao.status === 'respondeu') {
-            console.log('💰 Adicionando R$ 15,00 de comissão de venda');
+            console.log(`💰 Adicionando R$ ${comissaoVenda.toFixed(2)} de comissão de venda`);
             
             // Adicionar comissão de venda
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel + 15.00,
+               SET saldo_disponivel = saldo_disponivel + ?,
                    indicacoes_convertidas = indicacoes_convertidas + 1,
                    vendas_para_proxima_caixa = vendas_para_proxima_caixa + 1
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoVenda, indicadorId]
             );
             
             // Atualizar indicação
             await pool.query(
               `UPDATE indicacoes 
                SET status = 'converteu',
-                   comissao_venda = 15.00,
+                   comissao_venda = ?,
                    data_conversao = NOW()
                WHERE id = ?`,
-              [indicacao.id]
+              [comissaoVenda, indicacao.id]
             );
             
             // Registrar transação
@@ -350,27 +359,27 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'credito', 15.00, saldo_disponivel - 15.00, saldo_disponivel,
+                ?, ?, 'credito', ?, saldo_disponivel - ?, saldo_disponivel,
                 'Comissão de venda - Lead convertido'
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoVenda, comissaoVenda, indicadorId]
             );
             
             console.log('✅ Comissão de venda adicionada com sucesso!');
             
           } else if (indicacao.status === 'converteu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
-            console.log('🔄 Reversão COMPLETA - Removendo R$ 15,00 E bloqueando R$ 2,00');
+            console.log(`🔄 Reversão COMPLETA - Removendo R$ ${comissaoVenda.toFixed(2)} E bloqueando R$ ${comissaoResposta.toFixed(2)}`);
             
-            // Remover comissão de venda E bloquear R$ 2,00
+            // Remover comissão de venda E bloquear comissão de resposta
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel - 17.00,
-                   saldo_bloqueado = saldo_bloqueado + 2.00,
+               SET saldo_disponivel = saldo_disponivel - ?,
+                   saldo_bloqueado = saldo_bloqueado + ?,
                    indicacoes_convertidas = indicacoes_convertidas - 1,
                    indicacoes_respondidas = GREATEST(indicacoes_respondidas - 1, 0),
                    vendas_para_proxima_caixa = GREATEST(vendas_para_proxima_caixa - 1, 0)
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoTotal, comissaoResposta, indicadorId]
             );
             
             // Atualizar indicação para estado inicial
@@ -385,30 +394,30 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicacao.id]
             );
             
-            // Registrar transações (duas: débito de R$ 15 e bloqueio de R$ 2)
+            // Registrar transação
             await pool.query(
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'debito', 17.00, saldo_disponivel + 17.00, saldo_disponivel,
-                'Reversão completa - R$ 15 removidos e R$ 2 bloqueados'
+                ?, ?, 'debito', ?, saldo_disponivel + ?, saldo_disponivel,
+                CONCAT('Reversão completa - R$ ', ?, ' removidos e R$ ', ?, ' bloqueados')
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoTotal, comissaoTotal, comissaoVenda, comissaoResposta, indicadorId]
             );
             
-            console.log('✅ Reversão completa! R$ 15 removidos + R$ 2 bloqueados');
+            console.log(`✅ Reversão completa! R$ ${comissaoVenda.toFixed(2)} removidos + R$ ${comissaoResposta.toFixed(2)} bloqueados`);
             
           } else if (indicacao.status === 'converteu' && novoStatus !== 'convertido') {
-            console.log('🔄 Revertendo venda - Removendo R$ 15,00 de comissão');
+            console.log(`🔄 Revertendo venda - Removendo R$ ${comissaoVenda.toFixed(2)} de comissão`);
             
             // Remover comissão de venda
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel - 15.00,
+               SET saldo_disponivel = saldo_disponivel - ?,
                    indicacoes_convertidas = indicacoes_convertidas - 1,
                    vendas_para_proxima_caixa = GREATEST(vendas_para_proxima_caixa - 1, 0)
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoVenda, indicadorId]
             );
             
             // Atualizar indicação
@@ -426,25 +435,25 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'debito', 15.00, saldo_disponivel + 15.00, saldo_disponivel,
-                'Reversão de venda - Status alterado para ${novoStatus}'
+                ?, ?, 'debito', ?, saldo_disponivel + ?, saldo_disponivel,
+                CONCAT('Reversão de venda - Status alterado para ', ?)
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoVenda, comissaoVenda, novoStatus, indicadorId]
             );
             
-            console.log('✅ Venda revertida com sucesso! R$ 15,00 removidos');
+            console.log(`✅ Venda revertida com sucesso! R$ ${comissaoVenda.toFixed(2)} removidos`);
             
           } else if (indicacao.status === 'respondeu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
-            console.log('🔄 Revertendo liberação dos R$ 2,00 - Bloqueando novamente');
+            console.log(`🔄 Revertendo liberação dos R$ ${comissaoResposta.toFixed(2)} - Bloqueando novamente`);
             
             // Bloquear saldo novamente
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_disponivel = saldo_disponivel - 2.00,
-                   saldo_bloqueado = saldo_bloqueado + 2.00,
+               SET saldo_disponivel = saldo_disponivel - ?,
+                   saldo_bloqueado = saldo_bloqueado + ?,
                    indicacoes_respondidas = GREATEST(indicacoes_respondidas - 1, 0)
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoResposta, comissaoResposta, indicadorId]
             );
             
             // Atualizar indicação
@@ -462,24 +471,24 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'bloqueio', 2.00, saldo_disponivel + 2.00, saldo_disponivel,
+                ?, ?, 'bloqueio', ?, saldo_disponivel + ?, saldo_disponivel,
                 'Reversão de resposta - Saldo bloqueado novamente'
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
-            console.log('✅ R$ 2,00 bloqueados novamente!');
+            console.log(`✅ R$ ${comissaoResposta.toFixed(2)} bloqueados novamente!`);
             
           } else if (novoStatus === 'perdido' && indicacao.status === 'enviado_crm') {
-            console.log('❌ Movendo R$ 2,00 para saldo perdido');
+            console.log(`❌ Movendo R$ ${comissaoResposta.toFixed(2)} para saldo perdido`);
             
             // Mover saldo bloqueado para perdido
             await pool.query(
               `UPDATE indicadores 
-               SET saldo_bloqueado = saldo_bloqueado - 2.00,
-                   saldo_perdido = saldo_perdido + 2.00
+               SET saldo_bloqueado = saldo_bloqueado - ?,
+                   saldo_perdido = saldo_perdido + ?
                WHERE id = ?`,
-              [indicadorId]
+              [comissaoResposta, comissaoResposta, indicadorId]
             );
             
             // Atualizar indicação
@@ -495,10 +504,10 @@ export const updateLead = async (req: Request, res: Response) => {
               `INSERT INTO transacoes_indicador (
                 indicador_id, indicacao_id, tipo, valor, saldo_anterior, saldo_novo, descricao
               ) SELECT 
-                ?, ?, 'debito', 2.00, saldo_bloqueado + 2.00, saldo_bloqueado,
+                ?, ?, 'debito', ?, saldo_bloqueado + ?, saldo_bloqueado,
                 'Comissão perdida - Lead marcado como perdido'
                FROM indicadores WHERE id = ?`,
-              [indicadorId, indicacao.id, indicadorId]
+              [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
             console.log('✅ Saldo movido para perdido');
