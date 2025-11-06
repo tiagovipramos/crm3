@@ -38,7 +38,7 @@ services:
       DB_PORT: 3306
       DB_NAME: ${DB_NAME:-protecar_crm}
       DB_USER: ${DB_USER:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-key-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
