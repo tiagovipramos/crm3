@@ -72,15 +72,6 @@ export default function HeaderAdmin() {
         { view: 'dashboard-indicacao' as ViewAdmin, label: 'Indicação', icon: DollarSign },
       ],
     },
-    {
-      id: 'configuracoes',
-      label: 'Configurações',
-      icon: Settings,
-      submenus: [
-        { view: 'configuracoes' as ViewAdmin, label: 'Sistema', icon: Settings },
-        { view: 'configuracoes-indicador' as ViewAdmin, label: 'Indicadores', icon: DollarSign },
-      ],
-    },
   ];
 
   const menus = allMenus;
@@ -207,6 +198,19 @@ export default function HeaderAdmin() {
             >
               <FileText className="w-4 h-4" />
               <span className="text-sm font-medium">Auditoria</span>
+            </button>
+            
+            {/* Botão Configurações - Direto sem submenu */}
+            <button
+              onClick={() => handleViewChange('configuracoes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                currentView === 'configuracoes'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">Configurações</span>
             </button>
           </nav>
 
