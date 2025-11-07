@@ -24,11 +24,23 @@ import auditoriaRoutes from './routes/auditoria';
 
 dotenv.config();
 
+const PORT = process.env.PORT || 3001;
+
+// CORS - permitir todos os subdomínios
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'https://boraindicar.com.br',
+  'https://admin.boraindicar.com.br',
+  'https://crm.boraindicar.com.br',
+  'https://indicador.boraindicar.com.br',
+  'http://localhost:3000'
+];
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
     allowedHeaders: ['*']
@@ -39,11 +51,17 @@ const io = new Server(httpServer, {
   pingInterval: 25000
 });
 
-const PORT = process.env.PORT || 3001;
-
-// Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Permitir requisições sem origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
