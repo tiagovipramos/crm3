@@ -230,8 +230,12 @@ echo "⏹️  Parando containers..."
 docker-compose down
 echo ""
 
-# 6. Rebuild frontend com novas variáveis
-echo "🔨 Rebuild frontend..."
+# 6. Rebuild backend e frontend
+echo "🔨 Rebuild backend (CORS atualizado)..."
+docker-compose build --no-cache backend
+echo ""
+
+echo "🔨 Rebuild frontend (URLs HTTPS)..."
 docker-compose build --no-cache frontend
 echo ""
 
