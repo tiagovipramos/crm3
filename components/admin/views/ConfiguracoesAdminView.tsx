@@ -76,9 +76,9 @@ export default function ConfiguracoesAdminView() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [comissoesRes, lootboxRes, mensagensRes] = await Promise.all([
-        axios.get(`${API_URL}/api/configuracoes/comissoes`, { headers }),
-        axios.get(`${API_URL}/api/configuracoes/lootbox`, { headers }),
-        axios.get(`${API_URL}/api/configuracoes/mensagens`, { headers })
+        axios.get(`${API_URL}/configuracoes/comissoes`, { headers }),
+        axios.get(`${API_URL}/configuracoes/lootbox`, { headers }),
+        axios.get(`${API_URL}/configuracoes/mensagens`, { headers })
       ]);
 
       setComissoes(comissoesRes.data);
@@ -93,7 +93,7 @@ export default function ConfiguracoesAdminView() {
 
   const handleSaveComissoes = async () => {
     try {
-      await axios.put(`${API_URL}/api/configuracoes/comissoes`, comissoes, {
+      await axios.put(`${API_URL}/configuracoes/comissoes`, comissoes, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess('Comissões atualizadas com sucesso!');
@@ -121,7 +121,7 @@ export default function ConfiguracoesAdminView() {
     }
 
     try {
-      await axios.put(`${API_URL}/api/configuracoes/lootbox`, lootbox, {
+      await axios.put(`${API_URL}/configuracoes/lootbox`, lootbox, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess('Lootbox atualizado com sucesso!');
@@ -140,7 +140,7 @@ export default function ConfiguracoesAdminView() {
     }
 
     try {
-      await axios.post(`${API_URL}/api/configuracoes/mensagens`, {
+      await axios.post(`${API_URL}/configuracoes/mensagens`, {
         tipo: tipoSelecionado,
         mensagem: novaMensagem,
         ativo: true
@@ -167,7 +167,7 @@ export default function ConfiguracoesAdminView() {
     }
 
     try {
-      await axios.put(`${API_URL}/api/configuracoes/mensagens/${editandoMensagem.id}`, {
+      await axios.put(`${API_URL}/configuracoes/mensagens/${editandoMensagem.id}`, {
         mensagem: editandoMensagem.mensagem
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -186,7 +186,7 @@ export default function ConfiguracoesAdminView() {
 
   const handleToggleMensagem = async (mensagem: MensagemAutomatica) => {
     try {
-      await axios.put(`${API_URL}/api/configuracoes/mensagens/${mensagem.id}`, {
+      await axios.put(`${API_URL}/configuracoes/mensagens/${mensagem.id}`, {
         ativo: !mensagem.ativo
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -202,7 +202,7 @@ export default function ConfiguracoesAdminView() {
     if (!confirm('Tem certeza que deseja deletar esta mensagem?')) return;
 
     try {
-      await axios.delete(`${API_URL}/api/configuracoes/mensagens/${id}`, {
+      await axios.delete(`${API_URL}/configuracoes/mensagens/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess('Mensagem deletada com sucesso!');
