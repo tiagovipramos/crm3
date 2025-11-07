@@ -9,7 +9,6 @@ import {
   ChevronDown,
   LayoutDashboard,
   Users,
-  GitBranch,
   MessageSquare,
   BarChart3,
   DollarSign,
@@ -78,7 +77,6 @@ export default function HeaderAdmin() {
       label: 'Configurações',
       icon: Settings,
       submenus: [
-        { view: 'funis-gestao' as ViewAdmin, label: 'Gerenciar Funis', icon: GitBranch },
         { view: 'configuracoes' as ViewAdmin, label: 'Sistema', icon: Settings },
         { view: 'configuracoes-indicador' as ViewAdmin, label: 'Indicadores', icon: DollarSign },
       ],
