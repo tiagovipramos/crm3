@@ -328,7 +328,7 @@ export default function ConfiguracoesAdminView() {
               <span>💰</span> Lootbox de Vendas (Conversões)
             </h3>
           
-            <div className="grid grid-cols-1 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Vendas Necessárias
