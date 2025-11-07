@@ -319,13 +319,16 @@ export default function ConfiguracoesAdminView() {
         </div>
         <div className="h-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded mb-6"></div>
         
-        {/* LOOTBOX DE VENDAS */}
-        <div className="mb-8">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span>💰</span> Lootbox de Vendas (Conversões)
-          </h3>
+        {/* CONTAINER GRID PARA AS DUAS LOOTBOXES */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* LOOTBOX DE VENDAS */}
+          <div className="border-2 border-yellow-200 rounded-lg p-5 bg-gradient-to-br from-yellow-50 to-orange-50">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span>💰</span> Lootbox de Vendas (Conversões)
+            </h3>
+          
+            <div className="grid grid-cols-1 gap-4 mb-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Vendas Necessárias
@@ -453,10 +456,10 @@ export default function ConfiguracoesAdminView() {
               </span>
             </div>
           </div>
-        </div>
+          </div>
 
-        {/* LOOTBOX DE INDICAÇÕES */}
-        <div className="pt-6 border-t-2 border-gray-200">
+          {/* LOOTBOX DE INDICAÇÕES */}
+          <div className="border-2 border-blue-200 rounded-lg p-5 bg-gradient-to-br from-blue-50 to-indigo-50">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span>📱</span> Lootbox de Indicações (Respostas)
           </h3>
@@ -588,6 +591,7 @@ export default function ConfiguracoesAdminView() {
                 {lootbox.probabilidadeBaixoIndicacoes + lootbox.probabilidadeMedioIndicacoes + lootbox.probabilidadeAltoIndicacoes}%
               </span>
             </div>
+          </div>
           </div>
         </div>
         
