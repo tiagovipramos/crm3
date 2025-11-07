@@ -8,6 +8,7 @@ import { MessageSquare, Radio } from 'lucide-react';
 export default function ChatVisaoGeralView() {
   const chatsVendedores = useAdminStore((state) => state.chatsVendedores);
   const fetchChatsVendedores = useAdminStore((state) => state.fetchChatsVendedores);
+  const token = useAdminStore((state) => state.token);
   
   // Conectar ao Socket.IO para atualizações em tempo real
   useAdminSocket();
@@ -20,37 +21,10 @@ export default function ChatVisaoGeralView() {
   // Função para abrir CRM do vendedor em nova aba
   const abrirCRMVendedor = async (vendedorId: string | number) => {
     try {
-      // Buscar token do admin (pode estar com nome diferente)
-      let token = localStorage.getItem('token');
-      
-      // Se não encontrar, tentar buscar com outro nome comum
       if (!token) {
-        token = localStorage.getItem('adminToken');
-      }
-      if (!token) {
-        token = localStorage.getItem('auth_token');
-      }
-      
-      // Como último recurso, pegar de qualquer chave que tenha 'token'
-      if (!token) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.toLowerCase().includes('token')) {
-            token = localStorage.getItem(key);
-            console.log(`✅ Token encontrado em: ${key}`);
-            break;
-          }
-        }
-      }
-      
-      if (!token) {
-        console.error('❌ Nenhum token encontrado no localStorage');
-        console.log('📋 Chaves disponíveis:', Object.keys(localStorage));
         alert('Token de autenticação não encontrado. Faça login novamente.');
         return;
       }
-      
-      console.log('✅ Token do admin encontrado!');
 
       // Solicitar token temporário
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
