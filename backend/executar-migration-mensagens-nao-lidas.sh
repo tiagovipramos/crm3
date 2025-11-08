@@ -20,7 +20,7 @@ echo "📊 Conectando ao banco de dados..."
 echo ""
 
 # Executar a migration
-docker exec -i crm-mysql mysql -uroot -p"${DB_PASSWORD:-root123}" protecar_crm < backend/migrations/12-adicionar-mensagens-nao-lidas.sql
+docker exec -i crm-mysql mysql -uroot -p'Crm@VPS2025!Secure#ProdDB' protecar_crm < backend/migrations/12-adicionar-mensagens-nao-lidas.sql
 
 if [ $? -eq 0 ]; then
     echo ""
