@@ -24,6 +24,56 @@ class WhatsAppService {
     this.io = io;
   }
 
+  /**
+   * Normaliza número do WhatsApp removendo sufixos e prefixos especiais
+   * - Remove @lid (Local Identifier Device - números não totalmente registrados)
+   * - Remove @s.whatsapp.net
+   * - Remove prefixo '10' de números LID
+   * - Extrai apenas dígitos
+   */
+  private normalizarNumero(numero: string): string {
+    if (!numero) return '';
+    
+    // Log para debug
+    console.log('🔧 [NORMALIZAR] Número original:', numero);
+    
+    // Remover sufixos do WhatsApp
+    let numeroLimpo = numero
+      .replace('@lid', '')
+      .replace('@s.whatsapp.net', '');
+    
+    // Remover prefixo '10' se for número LID (formato: 101692611760167)
+    // Detecta se começa com '10' seguido de 11 ou mais dígitos (indicando LID)
+    if (/^10\d{11,}/.test(numeroLimpo)) {
+      numeroLimpo = numeroLimpo.substring(2);
+      console.log('🔧 [NORMALIZAR] Removido prefixo LID "10":', numeroLimpo);
+    }
+    
+    // Extrair apenas dígitos
+    numeroLimpo = numeroLimpo.replace(/\D/g, '');
+    
+    console.log('🔧 [NORMALIZAR] Número normalizado:', numeroLimpo);
+    return numeroLimpo;
+  }
+
+  /**
+   * Formata número para exibição: (DDD) NUMERO
+   */
+  private formatarNumeroExibicao(numero: string): string {
+    const numeroNormalizado = this.normalizarNumero(numero);
+    
+    // Remover código do país (55) se presente
+    const numeroSem55 = numeroNormalizado.startsWith('55') 
+      ? numeroNormalizado.substring(2) 
+      : numeroNormalizado;
+    
+    // Extrair DDD (2 primeiros dígitos)
+    const ddd = numeroSem55.substring(0, 2);
+    const resto = numeroSem55.substring(2);
+    
+    return `(${ddd}) ${resto}`;
+  }
+
   // Tentar reconectar sessões existentes ao iniciar
   async tryReconnectExistingSessions(consultorId: string): Promise<boolean> {
     // Evitar múltiplas tentativas simultâneas
@@ -470,8 +520,12 @@ class WhatsAppService {
     }
 
     try {
-      // Formatar número corretamente
-      const jid = numero.includes('@') ? numero : `${numero.replace(/\D/g, '')}@s.whatsapp.net`;
+      // ✅ NORMALIZAR NÚMERO antes de enviar (remove @lid, prefixos especiais)
+      const numeroNormalizado = this.normalizarNumero(numero);
+      console.log('📤 [ENVIAR] Número original:', numero, '→ Normalizado:', numeroNormalizado);
+      
+      // Formatar número corretamente para JID do WhatsApp
+      const jid = `${numeroNormalizado}@s.whatsapp.net`;
       
       // Enviar mensagem e capturar ID
       const sentMsg = await session.sock.sendMessage(jid, { text: conteudo });
@@ -486,18 +540,18 @@ class WhatsAppService {
         console.log('✅ Usando lead_id específico fornecido:', leadIdEspecifico);
         leadId = leadIdEspecifico;
       } else {
-        // Buscar lead_id pelo telefone (comportamento antigo)
+        // Buscar lead_id pelo telefone normalizado (comportamento antigo)
         const [leadRows] = await pool.query(
           'SELECT id FROM leads WHERE telefone = ? AND consultor_id = ? ORDER BY data_criacao DESC LIMIT 1',
-          [numero.replace(/\D/g, ''), consultorId]
+          [numeroNormalizado, consultorId]
         );
 
         if ((leadRows as any[]).length === 0) {
-          throw new Error(`Lead não encontrado para telefone: ${numero}`);
+          throw new Error(`Lead não encontrado para telefone: ${numeroNormalizado}`);
         }
 
         leadId = (leadRows as any[])[0].id;
-        console.log('📋 Lead encontrado pelo telefone:', leadId);
+        console.log('📋 Lead encontrado pelo telefone normalizado:', leadId);
       }
 
       // Salvar no banco COM O ID DO WHATSAPP
@@ -523,11 +577,11 @@ class WhatsAppService {
         }
       }
 
-      // Atualizar última mensagem do lead
+      // Atualizar última mensagem do lead usando número normalizado
       await pool.query(
         `UPDATE leads SET ultima_mensagem = ?, data_atualizacao = NOW() 
          WHERE telefone = ?`,
-        [conteudo.substring(0, 50), numero.replace(/\D/g, '')]
+        [conteudo.substring(0, 50), numeroNormalizado]
       );
 
       // Nota: O evento Socket.IO é emitido pelo mensagensController.ts após salvar no banco
@@ -797,7 +851,9 @@ class WhatsAppService {
         }
       }
       
-      const numero = message.key.remoteJid?.replace('@s.whatsapp.net', '') || '';
+      // ✅ NORMALIZAR NÚMERO - remover @lid, @s.whatsapp.net e prefixo LID
+      const numeroOriginal = message.key.remoteJid || '';
+      const numero = this.normalizarNumero(numeroOriginal);
       
       // Extrair conteúdo da mensagem
       let conteudo = message.message?.conversation || 
@@ -1024,11 +1080,8 @@ class WhatsAppService {
       if ((leadRows4 as any[]).length === 0) {
         // Criar novo lead
         console.log('👤 Criando novo lead para:', numero);
-        // Formatar número como (DDD) NUMERO
-        const numeroSem55 = numero.startsWith('55') ? numero.substring(2) : numero;
-        const ddd = numeroSem55.substring(0, 2);
-        const resto = numeroSem55.substring(2);
-        const nomeFormatado = `(${ddd}) ${resto}`;
+        // ✅ Usar função para formatar nome de exibição
+        const nomeFormatado = this.formatarNumeroExibicao(numero);
         
         const novoLeadResult = await pool.query(
           `INSERT INTO leads (nome, telefone, origem, status, consultor_id, mensagens_nao_lidas, data_criacao, data_atualizacao)
