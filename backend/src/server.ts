@@ -85,6 +85,48 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// ✅ MIDDLEWARE: Request ID para rastreamento de requisições
+// Adiciona ID único a cada requisição para facilitar debug em produção
+import crypto from 'crypto';
+
+app.use((req, res, next) => {
+  // Gerar ID único para esta requisição
+  const requestId = crypto.randomUUID();
+  (req as any).requestId = requestId;
+  
+  // Adicionar no header de resposta
+  res.setHeader('X-Request-ID', requestId);
+  
+  // Log estruturado da requisição (apenas para rotas da API, ignorar assets)
+  if (req.url.startsWith('/api/')) {
+    logger.info({
+      msg: '📨 Nova requisição',
+      requestId,
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']?.substring(0, 100)
+    });
+    
+    // Log ao finalizar resposta
+    const startTime = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      const level = res.statusCode >= 400 ? 'warn' : 'info';
+      logger[level]({
+        msg: res.statusCode >= 400 ? '⚠️ Requisição com erro' : '✅ Requisição finalizada',
+        requestId,
+        method: req.method,
+        url: req.url,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`
+      });
+    });
+  }
+  
+  next();
+});
+
 // 🛡️ RATE LIMITING - DESATIVADO TEMPORARIAMENTE
 // ⚠️ ATENÇÃO: Rate limiting está com limite INFINITO para testes
 // Para reativar, ajustar os valores de 'max' conforme necessário
