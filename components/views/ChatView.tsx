@@ -1466,10 +1466,18 @@ export default function ChatView() {
                 try {
                   console.log('🎤 Enviando áudio pré-definido:', audioUrl);
                   
-                  // Baixar o áudio do servidor
-                  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '');
-                  const response = await fetch(`${API_BASE_URL}${audioUrl}`);
+                  // Baixar o áudio do servidor - sempre usar URL sem /api
+                  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '');
+                  const audioFetchUrl = `${baseUrl}${audioUrl}`;
+                  console.log('📥 Buscando áudio de:', audioFetchUrl);
+                  
+                  const response = await fetch(audioFetchUrl);
+                  if (!response.ok) {
+                    throw new Error(`Erro ao baixar áudio: ${response.status} ${response.statusText}`);
+                  }
+                  
                   const audioBlob = await response.blob();
+                  console.log('✅ Áudio baixado:', audioBlob.size, 'bytes', audioBlob.type);
                   
                   // Enviar como se fosse gravado agora
                   await mensagensAPI.sendAudio(leadSelecionado.id, audioBlob, duracao);
