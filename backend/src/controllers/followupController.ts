@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import pool from '../config/database';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // ============================================
 // TIPOS

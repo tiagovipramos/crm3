@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // Listar todas as tarefas do consultor
 export const getTarefas = async (req: Request, res: Response) => {

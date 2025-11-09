@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { whatsappService } from '../services/whatsappService';
 import pool from '../config/database';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // Configurar multer para upload de arquivos
 const storage = multer.diskStorage({

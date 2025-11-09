@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // Configurar caminho do ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);

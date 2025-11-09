@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { RowDataPacket } from 'mysql2';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // ============================================
 // AUDITORIA DE INDICAÇÕES

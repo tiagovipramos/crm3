@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database';
 import { whatsappService } from '../services/whatsappService';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 export const login = async (req: Request, res: Response) => {
   try {

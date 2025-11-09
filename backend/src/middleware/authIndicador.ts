@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'protecar-secret-key-indicador-2024';
 

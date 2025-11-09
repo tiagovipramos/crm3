@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { cleanupService } from '../services/cleanupService';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 const router = Router();
 

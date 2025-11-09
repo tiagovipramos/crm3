@@ -1,5 +1,5 @@
 import { whatsappService } from './whatsappService';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 export interface ValidacaoWhatsAppResult {
   telefone: string;

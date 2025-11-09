@@ -4,7 +4,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // =========================================
 // LOGIN DE ADMIN

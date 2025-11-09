@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 export const getTempoMedioResposta = async (req: Request, res: Response) => {
   try {

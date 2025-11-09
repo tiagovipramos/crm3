@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { whatsappValidationService } from '../services/whatsappValidationService';
 import { whatsappService } from '../services/whatsappService';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 // ============================================
 // AUTENTICAÇÃO

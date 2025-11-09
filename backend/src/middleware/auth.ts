@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 interface JWTPayload {
   id: string;

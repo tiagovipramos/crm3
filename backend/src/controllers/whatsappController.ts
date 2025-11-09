@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { whatsappService } from '../services/whatsappService';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 export const conectar = async (req: Request, res: Response) => {
   try {

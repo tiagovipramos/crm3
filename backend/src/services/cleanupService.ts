@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 /**
  * Serviço de limpeza automática de arquivos antigos
