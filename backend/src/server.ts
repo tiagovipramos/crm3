@@ -85,11 +85,12 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// 🛡️ RATE LIMITING - Proteção contra brute force e DDoS
-// Limiter geral para todas as rotas da API
+// 🛡️ RATE LIMITING - DESATIVADO TEMPORARIAMENTE
+// ⚠️ ATENÇÃO: Rate limiting está com limite INFINITO para testes
+// Para reativar, ajustar os valores de 'max' conforme necessário
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // 100 requisições por IP
+  max: 99999, // ⚠️ INFINITO - praticamente sem limite
   message: { error: 'Muitas requisições, tente novamente mais tarde' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -99,31 +100,31 @@ const apiLimiter = rateLimit({
   }
 });
 
-// Limiter mais restritivo para rotas de autenticação (login)
+// Limiter para rotas de autenticação (login) - também desativado
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // apenas 5 tentativas de login
+  max: 99999, // ⚠️ INFINITO - praticamente sem limite
   message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos' },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Não contar requisições bem-sucedidas
+  skipSuccessfulRequests: true,
   handler: (req, res) => {
     logger.warn(`Tentativas de login excedidas para IP: ${req.ip}`);
     res.status(429).json({ 
       error: 'Muitas tentativas de login. Tente novamente em 15 minutos',
-      retryAfter: 900 // 15 minutos em segundos
+      retryAfter: 900
     });
   }
 });
 
-// Aplicar rate limiting
-app.use('/api/', apiLimiter); // Todas as rotas da API
-app.use('/api/auth/login', authLimiter); // Login mais restritivo
-app.use('/api/indicador/login', authLimiter); // Login de indicador também
+// Aplicar rate limiting (desativado temporariamente)
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/indicador/login', authLimiter);
 
-logger.info('🛡️ Rate limiting ativado:');
-logger.info('   • API geral: 100 req/15min');
-logger.info('   • Login: 5 tentativas/15min');
+logger.info('⚠️  Rate limiting DESATIVADO (limite infinito):');
+logger.info('   • API geral: 99999 req/15min (infinito)');
+logger.info('   • Login: 99999 tentativas/15min (infinito)');
 
 // Servir arquivos estáticos da pasta uploads com headers CORS personalizados
 // process.cwd() já aponta para a pasta backend quando o servidor está rodando
