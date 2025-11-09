@@ -1460,6 +1460,32 @@ export default function ChatView() {
                 setMensagemTexto(conteudo);
                 setMostrarMensagensPredefinidas(false);
               }}
+              onSelectAudio={async (audioUrl, duracao) => {
+                if (!leadSelecionado) return;
+                
+                try {
+                  console.log('🎤 Enviando áudio pré-definido:', audioUrl);
+                  
+                  // Baixar o áudio do servidor
+                  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '');
+                  const response = await fetch(`${API_BASE_URL}${audioUrl}`);
+                  const audioBlob = await response.blob();
+                  
+                  // Enviar como se fosse gravado agora
+                  await mensagensAPI.sendAudio(leadSelecionado.id, audioBlob, duracao);
+                  console.log('✅ Áudio pré-definido enviado com sucesso!');
+                  
+                  // Atualizar lista de mensagens
+                  setTimeout(() => {
+                    selecionarLead(leadSelecionado.id);
+                  }, 1000);
+                  
+                  setMostrarMensagensPredefinidas(false);
+                } catch (error: any) {
+                  console.error('❌ Erro ao enviar áudio pré-definido:', error);
+                  alert(`Erro ao enviar áudio: ${error.message || 'Erro desconhecido'}`);
+                }
+              }}
               token={typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}
             />
           )}

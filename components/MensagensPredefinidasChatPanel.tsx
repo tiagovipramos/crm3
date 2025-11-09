@@ -20,10 +20,11 @@ interface MensagemPredefinida {
 interface Props {
   onClose: () => void;
   onSelectMensagem: (conteudo: string) => void;
+  onSelectAudio: (audioUrl: string, duracao: number) => void;
   token: string;
 }
 
-export default function MensagensPredefinidasChatPanel({ onClose, onSelectMensagem, token }: Props) {
+export default function MensagensPredefinidasChatPanel({ onClose, onSelectMensagem, onSelectAudio, token }: Props) {
   const [mensagens, setMensagens] = useState<MensagemPredefinida[]>([]);
   const [audios, setAudios] = useState<MensagemPredefinida[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<'mensagens' | 'audios'>('mensagens');
@@ -116,6 +117,9 @@ export default function MensagensPredefinidasChatPanel({ onClose, onSelectMensag
               onClick={() => {
                 if (item.tipo === 'mensagem' && item.conteudo) {
                   onSelectMensagem(item.conteudo);
+                  onClose();
+                } else if (item.tipo === 'audio' && item.arquivo_url) {
+                  onSelectAudio(item.arquivo_url, item.duracao_audio || 0);
                   onClose();
                 }
               }}
