@@ -41,6 +41,10 @@ const allowedOrigins = [
 const app = express();
 const httpServer = createServer(app);
 
+// ✅ Confiar no proxy reverso (nginx) para obter IP real dos usuários
+// Necessário para rate limiting funcionar corretamente
+app.set('trust proxy', 1);
+
 // ✅ CORREÇÃO ERRO 10: Randomizar pingTimeout e pingInterval do Socket.IO
 // Valores constantes = heartbeat mecânico detectável pela Meta
 // Variação simula comportamento mais natural
