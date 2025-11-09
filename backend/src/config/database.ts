@@ -12,7 +12,7 @@ export const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
   connectionLimit: 50,  // Aumentado de 10 para 50 - suporta 30-50 usuários simultâneos
-  queueLimit: 20,       // Fila de espera para conexões
+  queueLimit: 0,        // 0 = fila ilimitada (aguarda conexão disponível)
   maxIdle: 10,          // Máximo de conexões idle mantidas
   idleTimeout: 60000,   // Timeout de 60s para conexões idle
   enableKeepAlive: true,
