@@ -74,7 +74,14 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 // process.cwd() já aponta para a pasta backend quando o servidor está rodando
 const uploadsPath = path.join(process.cwd(), 'uploads');
 app.use('/uploads', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:3000');
+  // Permitir CORS de qualquer origem permitida
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    // Sem origin (requisições diretas), permitir qualquer um
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
