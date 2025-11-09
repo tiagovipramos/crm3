@@ -117,10 +117,10 @@ export default function MensagensPredefinidasChatPanel({ onClose, onSelectMensag
               onClick={() => {
                 if (item.tipo === 'mensagem' && item.conteudo) {
                   onSelectMensagem(item.conteudo);
-                  onClose();
+                  // Não fecha - usuário fecha manualmente
                 } else if (item.tipo === 'audio' && item.arquivo_url) {
                   onSelectAudio(item.arquivo_url, item.duracao_audio || 0);
-                  onClose();
+                  onClose(); // Áudio envia direto, então fecha
                 }
               }}
               className="w-full text-left p-3 bg-white hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 border border-gray-200 rounded-lg transition-all hover:shadow-md hover:scale-[1.02] group"

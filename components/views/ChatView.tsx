@@ -1458,7 +1458,7 @@ export default function ChatView() {
               onClose={() => setMostrarMensagensPredefinidas(false)}
               onSelectMensagem={(conteudo) => {
                 setMensagemTexto(conteudo);
-                setMostrarMensagensPredefinidas(false);
+                // Não fecha mais automaticamente - usuário escolhe quando fechar
               }}
               onSelectAudio={async (audioUrl, duracao) => {
                 if (!leadSelecionado) return;
