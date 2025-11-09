@@ -12,8 +12,8 @@ import { mensagensAPI } from '@/lib/api';
 import MensagensPredefinidasChatPanel from '@/components/MensagensPredefinidasChatPanel';
 
 export default function ChatView() {
-  // URL base para arquivos de mídia (remover /api do final)
-  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '');
+  // URL base para arquivos de mídia (remover /api apenas do final)
+  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
   const {
     getLeadsDoConsultor,
