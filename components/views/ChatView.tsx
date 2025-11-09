@@ -1247,14 +1247,14 @@ export default function ChatView() {
                         // Mensagem de texto normal
                         <div
                           className={`
-                            max-w-[65%] rounded-lg px-3 py-2 shadow
+                            max-w-[65%] rounded-lg px-3 py-2 shadow overflow-hidden
                             ${msg.remetente === 'consultor'
                               ? 'bg-[#D9FDD3]'
                               : 'bg-white'
                             }
                           `}
                         >
-                          <p className="text-gray-900 whitespace-pre-wrap break-words">{msg.conteudo}</p>
+                          <p className="text-gray-900 whitespace-pre-wrap break-words break-all">{msg.conteudo}</p>
                           <div className="flex items-center justify-end gap-1 mt-1">
                             <span className="text-xs text-gray-500">{formatarHora(msg.timestamp)}</span>
                             {msg.remetente === 'consultor' && (
