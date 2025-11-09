@@ -1460,7 +1460,7 @@ export default function ChatView() {
                 setMensagemTexto(conteudo);
                 setMostrarMensagensPredefinidas(false);
               }}
-              token={typeof window !== 'undefined' ? localStorage.getItem('consultorToken') || '' : ''}
+              token={typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}
             />
           )}
 
