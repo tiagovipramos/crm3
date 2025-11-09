@@ -1466,8 +1466,8 @@ export default function ChatView() {
                 try {
                   console.log('🎤 Enviando áudio pré-definido:', audioUrl);
                   
-                  // Baixar o áudio do servidor - sempre usar URL sem /api
-                  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '');
+                  // Baixar o áudio do servidor - remover /api apenas do final da URL
+                  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
                   const audioFetchUrl = `${baseUrl}${audioUrl}`;
                   console.log('📥 Buscando áudio de:', audioFetchUrl);
                   
