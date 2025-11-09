@@ -56,7 +56,9 @@ export const authAPI = {
 export const leadsAPI = {
   getAll: async () => {
     const { data } = await api.get('/leads');
-    return data;
+    // Com paginação, a API retorna { leads: [...], pagination: {...} }
+    // Retornamos apenas o array de leads para manter compatibilidade
+    return data.leads || data;
   },
 
   getOne: async (id: string) => {
