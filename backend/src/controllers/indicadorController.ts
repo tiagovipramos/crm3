@@ -601,66 +601,74 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
           logger.warn('⚠️ Socket.IO não disponível para emitir evento');
         }
 
-        // 📱 Enviar mensagem automática de boas-vindas via WhatsApp
+        // 📱 Enviar mensagem automática de boas-vindas via WhatsApp (ASSÍNCRONO - NÃO BLOQUEIA RESPOSTA)
         if (statusConexao === 'online') {
-          try {
-            // Buscar nome do indicador
-            const [indicadorRows] = await pool.query<RowDataPacket[]>(
-              'SELECT nome FROM indicadores WHERE id = ?',
-              [indicadorId]
-            );
-            const indicadorNome = indicadorRows[0]?.nome || 'um parceiro';
+          // ✅ OTIMIZAÇÃO: Enviar em background sem bloquear resposta ao frontend
+          // Mantém TODOS os delays e lógicas de segurança do WhatsApp Service
+          logger.info('🚀 Iniciando envio de mensagem de boas-vindas em background...');
+          
+          // Executar em background (Promise sem await)
+          (async () => {
+            try {
+              // Buscar nome do indicador
+              const [indicadorRows] = await pool.query<RowDataPacket[]>(
+                'SELECT nome FROM indicadores WHERE id = ?',
+                [indicadorId]
+              );
+              const indicadorNome = indicadorRows[0]?.nome || 'um parceiro';
 
-            // 🔍 Buscar mensagens de boas-vindas ativas do banco
-            const [mensagensRows] = await pool.query<RowDataPacket[]>(
-              `SELECT mensagem FROM mensagens_automaticas 
-               WHERE tipo = 'boas_vindas' AND ativo = true
-               ORDER BY RAND() LIMIT 1`
-            );
+              // 🔍 Buscar mensagens de boas-vindas ativas do banco
+              const [mensagensRows] = await pool.query<RowDataPacket[]>(
+                `SELECT mensagem FROM mensagens_automaticas 
+                 WHERE tipo = 'boas_vindas' AND ativo = true
+                 ORDER BY RAND() LIMIT 1`
+              );
 
-            let mensagemBoasVindas = '';
-            
-            if (mensagensRows.length > 0) {
-              // ✅ Usar mensagem configurada e substituir variáveis
-              mensagemBoasVindas = mensagensRows[0].mensagem;
+              let mensagemBoasVindas = '';
               
-              // Substituir variáveis
-              mensagemBoasVindas = mensagemBoasVindas
-                .replace(/{nome_indicador}/g, indicadorNome)
-                .replace(/{nome_cliente}/g, nomeIndicado)
-                .replace(/{nome_vendedor}/g, consultorNome)
-                .replace(/{telefone_cliente}/g, validacao.telefone);
+              if (mensagensRows.length > 0) {
+                // ✅ Usar mensagem configurada e substituir variáveis
+                mensagemBoasVindas = mensagensRows[0].mensagem;
+                
+                // Substituir variáveis
+                mensagemBoasVindas = mensagemBoasVindas
+                  .replace(/{nome_indicador}/g, indicadorNome)
+                  .replace(/{nome_cliente}/g, nomeIndicado)
+                  .replace(/{nome_vendedor}/g, consultorNome)
+                  .replace(/{telefone_cliente}/g, validacao.telefone);
+                
+                logger.info('✅ Usando mensagem configurada do banco de dados');
+              } else {
+                // ❌ Fallback para mensagem padrão se não houver mensagem configurada
+                mensagemBoasVindas = `Olá ${nomeIndicado}, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
+                logger.info('⚠️ Nenhuma mensagem de boas-vindas configurada. Usando mensagem padrão.');
+              }
+
+              logger.info(`📤 [BACKGROUND] Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
+              logger.info(`📝 Mensagem: ${mensagemBoasVindas}`);
+              logger.info(`🆔 Lead ID para associar a mensagem: ${leadId}`);
               
-              logger.info('✅ Usando mensagem configurada do banco de dados');
-            } else {
-              // ❌ Fallback para mensagem padrão se não houver mensagem configurada
-              mensagemBoasVindas = `Olá ${nomeIndicado}, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
-              logger.info('⚠️ Nenhuma mensagem de boas-vindas configurada. Usando mensagem padrão.');
+              // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
+              // MANTÉM todos os delays e lógicas de segurança do whatsappService
+              await whatsappService.enviarMensagem(
+                consultorId,
+                validacao.telefone,
+                mensagemBoasVindas,
+                String(leadId)
+              );
+
+              logger.info('✅ [BACKGROUND] Mensagem de boas-vindas enviada com sucesso!');
+            } catch (whatsappError) {
+              logger.error('⚠️ [BACKGROUND] Erro ao enviar mensagem de boas-vindas:', whatsappError);
+              logger.error('📋 Detalhes do erro:', {
+                message: (whatsappError as Error).message,
+                stack: (whatsappError as Error).stack
+              });
             }
-
-            logger.info(`📤 Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
-            logger.info(`📝 Mensagem: ${mensagemBoasVindas}`);
-            logger.info(`🆔 Lead ID para associar a mensagem: ${leadId}`);
-            
-            // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
-            await whatsappService.enviarMensagem(
-              consultorId,
-              validacao.telefone,
-              mensagemBoasVindas,
-              String(leadId) // ✅ Converter para string
-            );
-
-            logger.info('✅ Mensagem de boas-vindas enviada com sucesso!');
-            mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM e recebeu uma mensagem de boas-vindas.';
-          } catch (whatsappError) {
-            logger.error('⚠️ Erro ao enviar mensagem de boas-vindas:', whatsappError);
-            logger.error('📋 Detalhes do erro:', {
-              message: (whatsappError as Error).message,
-              stack: (whatsappError as Error).stack
-            });
-            // Não bloquear a criação da indicação se o WhatsApp falhar
-            mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM.';
-          }
+          })(); // ✅ Executa imediatamente mas não bloqueia (sem await)
+          
+          // ✅ Responde ao frontend IMEDIATAMENTE (não espera WhatsApp)
+          mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM e receberá uma mensagem de boas-vindas em instantes.';
         } else {
           logger.info('⚠️ WhatsApp do consultor não está conectado. Mensagem de boas-vindas não será enviada.');
           mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM.';
