@@ -8,7 +8,7 @@ import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
 import pool from '../config/database';
 import pino from 'pino';
-import { logger } from './config/logger';
+import { logger } from '../config/logger';
 
 interface WhatsAppSession {
   sock: any;
