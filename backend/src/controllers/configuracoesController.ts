@@ -347,3 +347,191 @@ export const deleteMensagem = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao deletar mensagem automática' });
   }
 };
+
+// =====================================================
+// MENSAGENS E ÁUDIOS PRÉ-DEFINIDOS
+// =====================================================
+
+export const getMensagensPredefinidas = async (req: Request, res: Response) => {
+  try {
+    const { tipo } = req.query;
+    
+    let query = 'SELECT * FROM mensagens_predefinidas WHERE ativo = TRUE';
+    const params: any[] = [];
+    
+    if (tipo && (tipo === 'mensagem' || tipo === 'audio')) {
+      query += ' AND tipo = ?';
+      params.push(tipo);
+    }
+    
+    query += ' ORDER BY ordem ASC, data_criacao DESC';
+    
+    const [rows] = await pool.query(query, params);
+    
+    res.json(rows);
+  } catch (error) {
+    console.error('Erro ao buscar mensagens pré-definidas:', error);
+    res.status(500).json({ error: 'Erro ao buscar mensagens pré-definidas' });
+  }
+};
+
+export const createMensagemPredefinida = async (req: Request, res: Response) => {
+  try {
+    const { tipo, titulo, conteudo, arquivoUrl, duracaoAudio } = req.body;
+    
+    if (!tipo || !titulo) {
+      return res.status(400).json({ error: 'Tipo e título são obrigatórios' });
+    }
+    
+    if (tipo !== 'mensagem' && tipo !== 'audio') {
+      return res.status(400).json({ error: 'Tipo inválido. Use "mensagem" ou "audio"' });
+    }
+    
+    if (tipo === 'mensagem' && !conteudo) {
+      return res.status(400).json({ error: 'Conteúdo é obrigatório para mensagens de texto' });
+    }
+    
+    if (tipo === 'audio' && !arquivoUrl) {
+      return res.status(400).json({ error: 'Arquivo de áudio é obrigatório' });
+    }
+    
+    // Buscar próxima ordem
+    const [ordemRows] = await pool.query(
+      'SELECT COALESCE(MAX(ordem), 0) + 1 as proxima_ordem FROM mensagens_predefinidas'
+    );
+    const proximaOrdem = (ordemRows as any[])[0].proxima_ordem;
+    
+    const [result] = await pool.query(
+      `INSERT INTO mensagens_predefinidas (tipo, titulo, conteudo, arquivo_url, duracao_audio, ordem, ativo) 
+       VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
+      [tipo, titulo, conteudo || null, arquivoUrl || null, duracaoAudio || null, proximaOrdem]
+    );
+    
+    const insertId = (result as any).insertId;
+    
+    const [novaMensagem] = await pool.query(
+      'SELECT * FROM mensagens_predefinidas WHERE id = ?',
+      [insertId]
+    );
+    
+    // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
+    const io = (global as any).io;
+    if (io) {
+      console.log('📡 Emitindo nova mensagem pré-definida para todos os consultores...');
+      io.emit('mensagem_predefinida_criada', (novaMensagem as any[])[0]);
+    }
+    
+    res.status(201).json((novaMensagem as any[])[0]);
+  } catch (error) {
+    console.error('Erro ao criar mensagem pré-definida:', error);
+    res.status(500).json({ error: 'Erro ao criar mensagem pré-definida' });
+  }
+};
+
+export const updateMensagemPredefinida = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { titulo, conteudo, ativo, ordem } = req.body;
+    
+    const updates: string[] = [];
+    const values: any[] = [];
+    
+    if (titulo !== undefined) {
+      updates.push('titulo = ?');
+      values.push(titulo);
+    }
+    
+    if (conteudo !== undefined) {
+      updates.push('conteudo = ?');
+      values.push(conteudo);
+    }
+    
+    if (ativo !== undefined) {
+      updates.push('ativo = ?');
+      values.push(ativo);
+    }
+    
+    if (ordem !== undefined) {
+      updates.push('ordem = ?');
+      values.push(ordem);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+    
+    values.push(id);
+    
+    await pool.query(
+      `UPDATE mensagens_predefinidas SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    const [updatedMensagem] = await pool.query(
+      'SELECT * FROM mensagens_predefinidas WHERE id = ?',
+      [id]
+    );
+    
+    if ((updatedMensagem as any[]).length === 0) {
+      return res.status(404).json({ error: 'Mensagem pré-definida não encontrada' });
+    }
+    
+    // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
+    const io = (global as any).io;
+    if (io) {
+      console.log('📡 Emitindo atualização de mensagem pré-definida para todos os consultores...');
+      io.emit('mensagem_predefinida_atualizada', (updatedMensagem as any[])[0]);
+    }
+    
+    res.json((updatedMensagem as any[])[0]);
+  } catch (error) {
+    console.error('Erro ao atualizar mensagem pré-definida:', error);
+    res.status(500).json({ error: 'Erro ao atualizar mensagem pré-definida' });
+  }
+};
+
+export const deleteMensagemPredefinida = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const [result] = await pool.query(
+      'DELETE FROM mensagens_predefinidas WHERE id = ?',
+      [id]
+    );
+    
+    if ((result as any).affectedRows === 0) {
+      return res.status(404).json({ error: 'Mensagem pré-definida não encontrada' });
+    }
+    
+    // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
+    const io = (global as any).io;
+    if (io) {
+      console.log('📡 Emitindo remoção de mensagem pré-definida para todos os consultores...');
+      io.emit('mensagem_predefinida_deletada', { id });
+    }
+    
+    res.json({ message: 'Mensagem pré-definida deletada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar mensagem pré-definida:', error);
+    res.status(500).json({ error: 'Erro ao deletar mensagem pré-definida' });
+  }
+};
+
+export const uploadAudioPredefinido = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+    
+    const arquivoUrl = `/uploads/${req.file.filename}`;
+    
+    res.json({ 
+      arquivoUrl,
+      filename: req.file.filename,
+      message: 'Áudio enviado com sucesso' 
+    });
+  } catch (error) {
+    console.error('Erro ao fazer upload de áudio pré-definido:', error);
+    res.status(500).json({ error: 'Erro ao fazer upload de áudio' });
+  }
+};

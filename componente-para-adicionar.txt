@@ -1,0 +1,12 @@
+{/* Gerenciamento de Mensagens e Áudios Pré-Definidos */}
+      <MensagensAudiosManager 
+        token={token}
+        onSuccess={(msg) => {
+          setSuccess(msg);
+          setTimeout(() => setSuccess(''), 3000);
+        }}
+        onError={(msg) => {
+          setError(msg);
+          setTimeout(() => setError(''), 3000);
+        }}
+      />

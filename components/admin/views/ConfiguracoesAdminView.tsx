@@ -8,6 +8,7 @@ import {
   MensagemAutomatica 
 } from '@/types/admin';
 import { useAdminStore } from '@/store/useAdminStore';
+import MensagensPredefinidasPanel from '@/components/admin/MensagensPredefinidasPanel';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -603,7 +604,39 @@ export default function ConfiguracoesAdminView() {
         </button>
       </div>
 
-      {/* CARD 3: MENSAGENS AUTOMÁTICAS DE BOAS-VINDAS */}
+      {/* CARD 3: MENSAGENS E ÁUDIOS PRÉ-DEFINIDOS */}
+      <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+        <div className="flex items-center mb-4">
+          <span className="text-3xl mr-3">💬</span>
+          <h2 className="text-2xl font-bold text-gray-800">Mensagens e Áudios Pré-Definidos</h2>
+        </div>
+        <div className="h-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded mb-6"></div>
+        
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r">
+          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <span>ℹ️</span> Sobre esta funcionalidade:
+          </h3>
+          <div className="text-sm text-blue-800 space-y-1">
+            <p>• As mensagens e áudios criados aqui aparecem no botão "Mensagens Pré-Definidas" no chat do CRM</p>
+            <p>• Facilitam o envio rápido de respostas padronizadas aos leads</p>
+            <p>• Atualizações são sincronizadas em tempo real com todos os consultores</p>
+          </div>
+        </div>
+
+        <MensagensPredefinidasPanel 
+          token={token || ''}
+          onSuccess={(msg) => {
+            setSuccess(msg);
+            setTimeout(() => setSuccess(''), 3000);
+          }}
+          onError={(msg) => {
+            setError(msg);
+            setTimeout(() => setError(''), 3000);
+          }}
+        />
+      </div>
+
+      {/* CARD 4: MENSAGENS AUTOMÁTICAS DE BOAS-VINDAS */}
       <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
         <div className="flex items-center mb-4">
           <span className="text-3xl mr-3">📱</span>

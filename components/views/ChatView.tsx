@@ -9,6 +9,7 @@ import { formatarTelefone, isNumeroTelefone } from '@/lib/formatters';
 import AudioRecorder from '@/components/AudioRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { mensagensAPI } from '@/lib/api';
+import MensagensPredefinidasChatPanel from '@/components/MensagensPredefinidasChatPanel';
 
 export default function ChatView() {
   // URL base para arquivos de mídia (remover /api do final)
@@ -40,6 +41,7 @@ export default function ChatView() {
   const [mostrarAnexos, setMostrarAnexos] = useState(false);
   const [mostrarMenuLead, setMostrarMenuLead] = useState(false);
   const [mostrarDetalhes, setMostrarDetalhes] = useState(true);
+  const [mostrarMensagensPredefinidas, setMostrarMensagensPredefinidas] = useState(false);
   const [gravandoAudio, setGravandoAudio] = useState(false);
   const [mostrarConfigNotificacoes, setMostrarConfigNotificacoes] = useState(false);
   const [mostrarBuscaChat, setMostrarBuscaChat] = useState(false);
@@ -1381,16 +1383,11 @@ export default function ChatView() {
             )}
 
             <button 
-              onClick={() => setMostrarTemplates(!mostrarTemplates)}
+              onClick={() => setMostrarMensagensPredefinidas(!mostrarMensagensPredefinidas)}
               className="p-2 hover:bg-gray-200 rounded-full transition flex-shrink-0 relative"
               title="Mensagens pré-definidas"
             >
               <FileText className="w-6 h-6 text-gray-600" />
-              {templates.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#128C7E] text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {templates.length}
-                </span>
-              )}
             </button>
 
             {/* Dropdown de Templates */}
@@ -1455,8 +1452,20 @@ export default function ChatView() {
           </div>
           </div>
 
+          {/* Painel de Mensagens Pré-Definidas */}
+          {mostrarMensagensPredefinidas && (
+            <MensagensPredefinidasChatPanel
+              onClose={() => setMostrarMensagensPredefinidas(false)}
+              onSelectMensagem={(conteudo) => {
+                setMensagemTexto(conteudo);
+                setMostrarMensagensPredefinidas(false);
+              }}
+              token={typeof window !== 'undefined' ? localStorage.getItem('consultorToken') || '' : ''}
+            />
+          )}
+
           {/* Sidebar Direita - Detalhes do Lead */}
-          {mostrarDetalhes && (
+          {mostrarDetalhes && !mostrarMensagensPredefinidas && (
             <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
               {/* Header */}
               <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
