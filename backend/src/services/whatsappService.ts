@@ -19,6 +19,11 @@ class WhatsAppService {
   private sessions: Map<string, WhatsAppSession> = new Map();
   private io: any; // Socket.IO instance
   private reconnecting: Set<string> = new Set();
+  
+  // ✅ OPÇÃO 1: Reconexão agressiva com limitador de tentativas
+  private reconnectAttempts: Map<string, { count: number; lastAttempt: number }> = new Map();
+  private readonly MAX_RECONNECT_ATTEMPTS = 10;
+  private readonly RECONNECT_RESET_TIME = 5 * 60 * 1000; // 5 minutos
 
   setSocketIO(io: any) {
     this.io = io;
@@ -176,51 +181,72 @@ class WhatsAppService {
             // Remover sessão do map SEMPRE
             this.sessions.delete(consultorId);
             
-            // ✅ CORRIGIDO: Detectar corretamente quando NÃO deve reconectar
-            // Códigos que indicam logout manual/conflito (NÃO reconectar):
-            // - 401 (Unauthorized/Logout)
-            // - 440 (Session Conflict)
-            const isManualLogout = statusCode === DisconnectReason.loggedOut || 
-                                   statusCode === 401 || 
-                                   statusCode === 440;
+            // ✅ OPÇÃO 1: Reconexão agressiva com limitador de tentativas
+            // Apenas NÃO reconectar quando for logout EXPLÍCITO
+            const isManualLogout = statusCode === DisconnectReason.loggedOut || statusCode === 401;
             
-            // Códigos que podem reconectar automaticamente:
-            // - 515 (Stream Error - restart required)
-            // - 408 (Connection Timeout)
-            // - undefined (erro de rede genérico)
-            const shouldReconnect = !isManualLogout && (
-              statusCode === 515 || 
-              statusCode === 408 || 
-              statusCode === undefined
-            );
-            
-            if (shouldReconnect) {
-              // ✅ Reconectar apenas em erros de rede/temporários
-              console.log('🔄 Erro de conexão detectado. Tentando reconectar em 3 segundos...');
+            if (!isManualLogout) {
+              // ✅ Verificar tentativas de reconexão
+              const attempts = this.reconnectAttempts.get(consultorId) || { count: 0, lastAttempt: 0 };
+              const now = Date.now();
               
-              // Atualizar status no banco
-              const [rows] = await pool.query(
-                'UPDATE consultores SET status_conexao = ? WHERE id = ?',
-                ['connecting', consultorId]
-              );
-              
-              // Emitir evento de reconexão
-              if (this.io) {
-                this.io.to(`consultor_${consultorId}`).emit('whatsapp_reconnecting', {
-                  consultorId,
-                  reason: errorMsg
-                });
+              // Resetar contador se passaram mais de 5 minutos desde a última tentativa
+              if (now - attempts.lastAttempt > this.RECONNECT_RESET_TIME) {
+                console.log('🔄 Resetando contador de tentativas (passou 5 minutos)');
+                attempts.count = 0;
               }
               
-              setTimeout(() => {
-                this.conectar(consultorId).catch(err => {
-                  console.error('Erro ao reconectar:', err);
-                });
-              }, 3000);
+              if (attempts.count >= this.MAX_RECONNECT_ATTEMPTS) {
+                console.log(`⚠️ Máximo de ${this.MAX_RECONNECT_ATTEMPTS} tentativas atingido. Limpando sessão...`);
+                console.log(`📊 Tentativas realizadas: ${attempts.count} | Última tentativa: ${new Date(attempts.lastAttempt).toLocaleString()}`);
+                
+                // Limpar contador e prosseguir para limpeza de sessão
+                this.reconnectAttempts.delete(consultorId);
+              } else {
+                // ✅ Tentar reconectar (dentro do limite)
+                attempts.count++;
+                attempts.lastAttempt = now;
+                this.reconnectAttempts.set(consultorId, attempts);
+                
+                console.log(`🔄 Erro de conexão detectado (${errorMsg}). Tentativa ${attempts.count}/${this.MAX_RECONNECT_ATTEMPTS}`);
+                console.log(`📋 Status Code: ${statusCode} | Motivo: ${errorMsg}`);
+                
+                // Atualizar status no banco
+                await pool.query(
+                  'UPDATE consultores SET status_conexao = ? WHERE id = ?',
+                  ['connecting', consultorId]
+                );
+                
+                // Emitir evento de reconexão
+                if (this.io) {
+                  this.io.to(`consultor_${consultorId}`).emit('whatsapp_reconnecting', {
+                    consultorId,
+                    reason: errorMsg,
+                    attempt: attempts.count,
+                    maxAttempts: this.MAX_RECONNECT_ATTEMPTS
+                  });
+                }
+                
+                // Aguardar 3 segundos e tentar reconectar
+                setTimeout(() => {
+                  this.conectar(consultorId).catch(err => {
+                    console.error('❌ Erro ao reconectar:', err);
+                  });
+                }, 3000);
+                
+                resolve(null);
+                return; // Importante: sair aqui para não executar limpeza de sessão
+              }
+            }
+            
+            // Se chegou aqui, é logout manual OU atingiu máximo de tentativas - LIMPAR TUDO
+            if (isManualLogout) {
+              console.log('🗑️ LOGOUT MANUAL DETECTADO - Limpando sessão automaticamente...');
             } else {
-              // Logout explícito (desconectou no aparelho) - LIMPAR TUDO
-              console.log('🗑️ LOGOUT DETECTADO - Limpando sessão automaticamente...');
-              this.sessions.delete(consultorId);
+              console.log('🗑️ MÁXIMO DE TENTATIVAS ATINGIDO - Limpando sessão automaticamente...');
+            }
+            
+            this.sessions.delete(consultorId);
               
               const fs = require('fs');
               const path = require('path');
@@ -292,11 +318,17 @@ class WhatsAppService {
                 
                 console.log('📡 Evento de desconexão emitido para o frontend e admins');
               }
-            }
 
             resolve(null);
           } else if (connection === 'open') {
             console.log('✅ WhatsApp conectado para consultor:', consultorId);
+            
+            // ✅ Resetar contador de tentativas de reconexão ao conectar com sucesso
+            const attempts = this.reconnectAttempts.get(consultorId);
+            if (attempts && attempts.count > 0) {
+              console.log(`🎉 Reconexão bem-sucedida após ${attempts.count} tentativa(s)!`);
+              this.reconnectAttempts.delete(consultorId);
+            }
 
             // Capturar número do WhatsApp conectado
             let numeroWhatsapp: string | undefined;
