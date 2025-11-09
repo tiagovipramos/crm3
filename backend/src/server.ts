@@ -241,7 +241,11 @@ const start = async () => {
       // Iniciar limpeza automática de arquivos
       cleanupService.iniciarLimpezaAutomatica();
 
-      // Reconectar sessões do WhatsApp após 5 segundos
+      // ✅ CORREÇÃO ERRO 5: Reconexão com randomização completa para evitar padrão de bot
+      // Delay inicial aleatório: 30-90 segundos (não sempre 5s)
+      const delayInicial = 30000 + Math.random() * 60000; // 30-90 segundos
+      console.log(`⏱️  Aguardando ${Math.round(delayInicial / 1000)}s antes de tentar reconexões automáticas`);
+      
       setTimeout(async () => {
         console.log('');
         console.log('🔄 ============================================');
@@ -288,8 +292,11 @@ const start = async () => {
               console.log(`⚠️  Falha ao reconectar consultor ${consultorId}:`, (error as Error).message);
             }
             
-            // Aguardar 2 segundos entre reconexões para evitar sobrecarga
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // ✅ CORREÇÃO ERRO 5: Delay aleatório entre reconexões (15-45 segundos)
+            // Simula comportamento humano - não robótico
+            const delayEntreReconexoes = 15000 + Math.random() * 30000; // 15-45 segundos
+            console.log(`⏱️  Aguardando ${Math.round(delayEntreReconexoes / 1000)}s antes da próxima reconexão`);
+            await new Promise(resolve => setTimeout(resolve, delayEntreReconexoes));
           }
 
           console.log('');
@@ -299,7 +306,7 @@ const start = async () => {
         } catch (error) {
           console.error('❌ Erro ao reconectar sessões:', error);
         }
-      }, 5000);
+      }, delayInicial);
     });
   } catch (error) {
     console.error('❌ Erro ao iniciar servidor:', error);

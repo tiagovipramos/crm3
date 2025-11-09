@@ -24,6 +24,10 @@ class WhatsAppService {
   private reconnectAttempts: Map<string, { count: number; lastAttempt: number }> = new Map();
   private readonly MAX_RECONNECT_ATTEMPTS = 10;
   private readonly RECONNECT_RESET_TIME = 5 * 60 * 1000; // 5 minutos
+  
+  // ✅ CORREÇÃO ERRO 2: Sistema de rotação de User-Agents
+  // Armazena qual browser foi usado por cada consultor para rotação
+  private consultorBrowserIndex: Map<string, number> = new Map();
 
   setSocketIO(io: any) {
     this.io = io;
@@ -129,20 +133,65 @@ class WhatsAppService {
 
       const { state, saveCreds } = await useMultiFileAuthState(`./auth_sessions/auth_${consultorId}`);
 
+      // ✅ CORREÇÃO CRÍTICA #1 e #2: Browser identifier realista com rotação de User-Agents
+      // Lista expandida de browsers reais com versões atualizadas (Nov 2025)
+      const browsersReais: [string, string, string][] = [
+        // Windows + Chrome (versões recentes)
+        ['Windows', 'Chrome', '130.0.6723.116'],
+        ['Windows', 'Chrome', '130.0.6723.92'],
+        ['Windows', 'Chrome', '129.0.6668.100'],
+        ['Windows', 'Chrome', '128.0.6613.120'],
+        // macOS + Chrome
+        ['Macintosh', 'Chrome', '130.0.6723.116'],
+        ['Macintosh', 'Chrome', '130.0.6723.92'],
+        ['Macintosh', 'Chrome', '129.0.6668.100'],
+        // Linux + Chrome
+        ['X11', 'Chrome', '130.0.6723.91'],
+        ['X11', 'Chrome', '129.0.6668.89'],
+        ['X11', 'Chrome', '128.0.6613.84'],
+        // Edge (baseado em Chromium) - algumas versões
+        ['Windows', 'Edge', '130.0.2849.52'],
+        ['Windows', 'Edge', '129.0.2792.89'],
+        ['Macintosh', 'Edge', '130.0.2849.52'],
+      ];
+      
+      // ✅ CORREÇÃO ERRO 2: Implementar rotação de User-Agents
+      // Cada reconexão usa um browser diferente (sequencial com wrap-around)
+      let currentIndex = this.consultorBrowserIndex.get(consultorId) || 0;
+      
+      // Se for a primeira conexão, randomizar o índice inicial
+      if (!this.consultorBrowserIndex.has(consultorId)) {
+        currentIndex = Math.floor(Math.random() * browsersReais.length);
+        console.log(`🎲 Primeira conexão: índice inicial aleatório = ${currentIndex}`);
+      } else {
+        // Em reconexões subsequentes, incrementar para variar o User-Agent
+        currentIndex = (currentIndex + 1) % browsersReais.length;
+        console.log(`🔄 Reconexão detectada: rotacionando para índice = ${currentIndex}`);
+      }
+      
+      // Armazenar o próximo índice para a próxima conexão
+      this.consultorBrowserIndex.set(consultorId, currentIndex);
+      
+      // Selecionar browser baseado no índice rotativo
+      const browserAleatorio = browsersReais[currentIndex] as [string, string, string];
+      
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }) as any, // Reduz logs no console
-        browser: ['VIP CRM', 'Chrome', '1.0.0'],
+        browser: browserAleatorio, // ✅ Browser realista e randomizado
         connectTimeoutMs: 60000, // 60 segundos de timeout
         defaultQueryTimeoutMs: 60000,
         keepAliveIntervalMs: 30000,
         // Configurações de retry
         retryRequestDelayMs: 250,
         maxMsgRetryCount: 5,
-        // Marca mensagens como lidas automaticamente
-        markOnlineOnConnect: true,
+        // ✅ CORREÇÃO ERRO 8: NÃO marcar como online automaticamente
+        // Humanos não ficam online instantaneamente ao conectar
+        markOnlineOnConnect: false,
       });
+      
+      console.log('✅ Usando browser identifier realista:', browserAleatorio.join(' / '));
 
       sock.ev.on('creds.update', saveCreds);
 
@@ -176,7 +225,7 @@ class WhatsAppService {
             const errorMsg = (lastDisconnect?.error as any)?.message || 'Desconhecido';
 
             console.log(`❌ WhatsApp desconectado. Motivo: ${errorMsg} (Code: ${statusCode})`);
-            console.log(`📋 Status Code: ${statusCode}, Logout Code: ${DisconnectReason.loggedOut}`);
+            console.log(`� Status Code: ${statusCode}, Logout Code: ${DisconnectReason.loggedOut}`);
             
             // Remover sessão do map SEMPRE
             this.sessions.delete(consultorId);
@@ -192,7 +241,7 @@ class WhatsAppService {
               
               // Resetar contador se passaram mais de 5 minutos desde a última tentativa
               if (now - attempts.lastAttempt > this.RECONNECT_RESET_TIME) {
-                console.log('🔄 Resetando contador de tentativas (passou 5 minutos)');
+                console.log('� Resetando contador de tentativas (passou 5 minutos)');
                 attempts.count = 0;
               }
               
@@ -227,12 +276,20 @@ class WhatsAppService {
                   });
                 }
                 
-                // Aguardar 3 segundos e tentar reconectar
+                // ✅ CORREÇÃO ERRO 4: Backoff exponencial com jitter (randomização)
+                // Simular comportamento humano - não robótico
+                const baseDelay = 30000; // 30 segundos (base)
+                const jitter = Math.random() * 15000; // 0-15 segundos de variação aleatória
+                const exponentialDelay = baseDelay * Math.pow(2, attempts.count - 1); // 2^(tentativa-1)
+                const totalDelay = Math.min(exponentialDelay + jitter, 300000); // Máximo 5 minutos
+                
+                console.log(`⏱️ Aguardando ${Math.round(totalDelay / 1000)}s antes de reconectar (base: ${baseDelay/1000}s, exponencial: ${Math.round(exponentialDelay/1000)}s, jitter: ${Math.round(jitter/1000)}s)`);
+                
                 setTimeout(() => {
                   this.conectar(consultorId).catch(err => {
                     console.error('❌ Erro ao reconectar:', err);
                   });
-                }, 3000);
+                }, totalDelay);
                 
                 resolve(null);
                 return; // Importante: sair aqui para não executar limpeza de sessão
@@ -559,8 +616,47 @@ class WhatsAppService {
       // Formatar número corretamente para JID do WhatsApp
       const jid = `${numeroNormalizado}@s.whatsapp.net`;
       
-      // Enviar mensagem e capturar ID
-      const sentMsg = await session.sock.sendMessage(jid, { text: conteudo });
+      // ✅ CORREÇÃO ERRO 6 e 7: Simular comportamento humano com delays e typing
+      // FASE 1: Simular tempo de leitura (2-5 segundos)
+      const tempoLeitura = 2000 + Math.random() * 3000;
+      console.log(`⏱️ Simulando leitura: ${Math.round(tempoLeitura / 1000)}s`);
+      await new Promise(resolve => setTimeout(resolve, tempoLeitura));
+      
+      // FASE 2: Enviar presença "digitando..." (CRÍTICO para evitar detecção)
+      console.log('⌨️ Enviando presença "composing" (digitando...)');
+      await session.sock.sendPresenceUpdate('composing', jid);
+      
+      // FASE 3: Simular tempo de digitação baseado no tamanho da mensagem
+      // ~50ms por caractere (velocidade de digitação humana média)
+      const caracteresPorSegundo = 20; // 20 caracteres por segundo (humano médio)
+      const msSegundo = 1000 / caracteresPorSegundo; // ~50ms por caractere
+      const tempoDigitacaoBase = Math.min(conteudo.length * msSegundo, 8000); // Máx 8s
+      const variacaoDigitacao = Math.random() * 2000; // +0-2s de variação
+      const tempoDigitacao = tempoDigitacaoBase + variacaoDigitacao;
+      
+      console.log(`⌨️ Simulando digitação: ${Math.round(tempoDigitacao / 1000)}s (${conteudo.length} caracteres)`);
+      await new Promise(resolve => setTimeout(resolve, tempoDigitacao));
+      
+      // FASE 4: Parar de "digitar" e marcar como disponível
+      console.log('✋ Parando de digitar (paused)');
+      await session.sock.sendPresenceUpdate('paused', jid);
+      
+      // FASE 5: Pequeno delay final antes de enviar (100-500ms)
+      const delayFinal = 100 + Math.random() * 400;
+      await new Promise(resolve => setTimeout(resolve, delayFinal));
+      
+      // FASE 6: Finalmente enviar a mensagem
+      console.log('📤 Enviando mensagem agora...');
+      // ✅ CORREÇÃO ERRO 3: Adicionar contextInfo para evitar detecção de bot
+      // WhatsApp Web SEMPRE envia contextInfo - mensagens sem isso são suspeitas
+      const sentMsg = await session.sock.sendMessage(jid, { 
+        text: conteudo,
+        contextInfo: {
+          isForwarded: false,
+          mentionedJid: [],
+          forwardingScore: 0
+        }
+      });
       const whatsappMessageId = sentMsg?.key?.id || null;
       
       console.log('📤 Mensagem enviada com WhatsApp ID:', whatsappMessageId);
