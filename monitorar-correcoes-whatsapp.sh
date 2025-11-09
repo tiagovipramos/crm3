@@ -54,6 +54,18 @@ npm run dev 2>&1 | while IFS= read -r line; do
     elif echo "$line" | grep -q "markOnlineOnConnect"; then
         echo -e "${GREEN}[$timestamp] ✅ CORREÇÃO 8 (markOnlineOnConnect):${NC} $line"
     
+    # ERRO 9: Timeouts randomizados
+    elif echo "$line" | grep -q "Timeouts randomizados"; then
+        echo -e "${CYAN}[$timestamp] ✅ CORREÇÃO 9 (Timeouts Randomizados):${NC} $line"
+    
+    # ERRO 10: Socket.IO Pings randomizados
+    elif echo "$line" | grep -q "Socket.IO.*pingTimeout\|pingInterval"; then
+        echo -e "${YELLOW}[$timestamp] ✅ CORREÇÃO 10 (Socket.IO Pings):${NC} $line"
+    
+    # ERRO 11: Retry config humanizado
+    elif echo "$line" | grep -q "Retry config"; then
+        echo -e "${MAGENTA}[$timestamp] ✅ CORREÇÃO 11 (Retry Config):${NC} $line"
+    
     # Logs importantes gerais
     elif echo "$line" | grep -qE "WhatsApp conectado|WhatsApp desconectado|Mensagem enviada|nova_mensagem"; then
         echo "[$timestamp] 📱 $line"

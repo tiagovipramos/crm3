@@ -38,6 +38,15 @@ const allowedOrigins = [
 
 const app = express();
 const httpServer = createServer(app);
+
+// ✅ CORREÇÃO ERRO 10: Randomizar pingTimeout e pingInterval do Socket.IO
+// Valores constantes = heartbeat mecânico detectável pela Meta
+// Variação simula comportamento mais natural
+const pingTimeout = 55000 + Math.floor(Math.random() * 15000); // 55-70s (não sempre 60s)
+const pingInterval = 20000 + Math.floor(Math.random() * 10000); // 20-30s (não sempre 25s)
+
+console.log(`🔌 Socket.IO: pingTimeout=${Math.round(pingTimeout/1000)}s, pingInterval=${Math.round(pingInterval/1000)}s`);
+
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -47,8 +56,8 @@ const io = new Server(httpServer, {
   },
   transports: ['websocket', 'polling'],
   allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000
+  pingTimeout: pingTimeout, // ✅ Randomizado: 55-70s
+  pingInterval: pingInterval // ✅ Randomizado: 20-30s
 });
 
 app.use(cors({

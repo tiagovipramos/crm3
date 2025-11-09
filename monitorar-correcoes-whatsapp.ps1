@@ -117,6 +117,24 @@ $outputHandler = {
         elseif ($line -match "markOnlineOnConnect") {
             Write-LogLine -timestamp $timestamp -line $line -type "correcao8"
         }
+        # ERRO 9: Timeouts randomizados
+        elseif ($line -match "Timeouts randomizados") {
+            Write-Host "[$timestamp] " -NoNewline -ForegroundColor Gray
+            Write-Host "✅ CORREÇÃO 9 (Timeouts Randomizados): " -NoNewline -ForegroundColor Cyan
+            Write-Host $line
+        }
+        # ERRO 10: Socket.IO Pings randomizados
+        elseif ($line -match "Socket\.IO.*pingTimeout|pingInterval") {
+            Write-Host "[$timestamp] " -NoNewline -ForegroundColor Gray
+            Write-Host "✅ CORREÇÃO 10 (Socket.IO Pings): " -NoNewline -ForegroundColor Yellow
+            Write-Host $line
+        }
+        # ERRO 11: Retry config humanizado
+        elseif ($line -match "Retry config") {
+            Write-Host "[$timestamp] " -NoNewline -ForegroundColor Gray
+            Write-Host "✅ CORREÇÃO 11 (Retry Config): " -NoNewline -ForegroundColor Magenta
+            Write-Host $line
+        }
         # Logs importantes gerais
         elseif ($line -match "WhatsApp conectado|WhatsApp desconectado|Mensagem enviada|nova_mensagem") {
             Write-LogLine -timestamp $timestamp -line $line -type "whatsapp"

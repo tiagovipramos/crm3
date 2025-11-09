@@ -175,17 +175,32 @@ class WhatsAppService {
       // Selecionar browser baseado no índice rotativo
       const browserAleatorio = browsersReais[currentIndex] as [string, string, string];
       
+      // ✅ CORREÇÃO ERRO 9: Randomizar timeouts para evitar fingerprinting
+      // Valores constantes = padrão de bot. Variação simula comportamento humano.
+      const connectTimeout = 50000 + Math.floor(Math.random() * 20000); // 50-70s
+      const queryTimeout = 50000 + Math.floor(Math.random() * 20000); // 50-70s
+      const keepAliveInterval = 25000 + Math.floor(Math.random() * 10000); // 25-35s
+      
+      console.log(`⏱️ Timeouts randomizados: connect=${Math.round(connectTimeout/1000)}s, query=${Math.round(queryTimeout/1000)}s, keepAlive=${Math.round(keepAliveInterval/1000)}s`);
+      
+      // ✅ CORREÇÃO ERRO 11: Reduzir retries e randomizar delay
+      // 5 retries = bot comercial. 2 retries = comportamento humano mais realista.
+      const retryDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms (não sempre 250ms)
+      const maxRetries = 2; // Humanos raramente tentam mais que 2 vezes
+      
+      console.log(`🔄 Retry config: delay=${retryDelay}ms, maxRetries=${maxRetries}`);
+      
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }) as any, // Reduz logs no console
         browser: browserAleatorio, // ✅ Browser realista e randomizado
-        connectTimeoutMs: 60000, // 60 segundos de timeout
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000,
-        // Configurações de retry
-        retryRequestDelayMs: 250,
-        maxMsgRetryCount: 5,
+        connectTimeoutMs: connectTimeout, // ✅ Randomizado: 50-70s
+        defaultQueryTimeoutMs: queryTimeout, // ✅ Randomizado: 50-70s
+        keepAliveIntervalMs: keepAliveInterval, // ✅ Randomizado: 25-35s
+        // ✅ CORREÇÃO ERRO 11: Retry mais humano
+        retryRequestDelayMs: retryDelay, // ✅ Randomizado: 200-400ms
+        maxMsgRetryCount: maxRetries, // ✅ Reduzido: 2 (mais realista que 5)
         // ✅ CORREÇÃO ERRO 8: NÃO marcar como online automaticamente
         // Humanos não ficam online instantaneamente ao conectar
         markOnlineOnConnect: false,
