@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
+import { logger } from './config/logger';
 
 // =====================================================
 // COMISSÕES
@@ -19,7 +20,7 @@ export const getComissoes = async (req: Request, res: Response) => {
       comissaoVenda: parseFloat(comissoes.comissao_venda)
     });
   } catch (error) {
-    console.error('Erro ao buscar comissões:', error);
+    logger.error('Erro ao buscar comissões:', error);
     res.status(500).json({ error: 'Erro ao buscar configurações de comissão' });
   }
 };
@@ -49,7 +50,7 @@ export const updateComissoes = async (req: Request, res: Response) => {
       comissaoVenda: parseFloat(comissaoVenda)
     });
   } catch (error) {
-    console.error('Erro ao atualizar comissões:', error);
+    logger.error('Erro ao atualizar comissões:', error);
     res.status(500).json({ error: 'Erro ao atualizar configurações de comissão' });
   }
 };
@@ -85,7 +86,7 @@ export const getLootbox = async (req: Request, res: Response) => {
       probabilidadeAltoVendas: lootbox.probabilidade_alto_vendas
     });
   } catch (error) {
-    console.error('Erro ao buscar lootbox:', error);
+    logger.error('Erro ao buscar lootbox:', error);
     res.status(500).json({ error: 'Erro ao buscar configurações de lootbox' });
   }
 };
@@ -174,7 +175,7 @@ export const updateLootbox = async (req: Request, res: Response) => {
     // 🔥 EMITIR EVENTO SOCKET.IO PARA TODOS OS INDICADORES EM TEMPO REAL
     const io = (global as any).io;
     if (io) {
-      console.log('📡 Emitindo atualização de configurações de lootbox para todos os indicadores...');
+      logger.info('📡 Emitindo atualização de configurações de lootbox para todos os indicadores...');
       
       // Buscar todos os indicadores ativos
       const [indicadoresRows] = await pool.query('SELECT id FROM indicadores WHERE ativo = true');
@@ -193,7 +194,7 @@ export const updateLootbox = async (req: Request, res: Response) => {
         });
       });
       
-      console.log(`✅ Evento emitido para ${indicadores.length} indicadores`);
+      logger.info(`✅ Evento emitido para ${indicadores.length} indicadores`);
     }
     
     res.json({ 
@@ -212,7 +213,7 @@ export const updateLootbox = async (req: Request, res: Response) => {
       probabilidadeAltoVendas
     });
   } catch (error) {
-    console.error('Erro ao atualizar lootbox:', error);
+    logger.error('Erro ao atualizar lootbox:', error);
     res.status(500).json({ error: 'Erro ao atualizar configurações de lootbox' });
   }
 };
@@ -239,7 +240,7 @@ export const getMensagens = async (req: Request, res: Response) => {
     
     res.json(rows);
   } catch (error) {
-    console.error('Erro ao buscar mensagens:', error);
+    logger.error('Erro ao buscar mensagens:', error);
     res.status(500).json({ error: 'Erro ao buscar mensagens automáticas' });
   }
 };
@@ -278,7 +279,7 @@ export const createMensagem = async (req: Request, res: Response) => {
     
     res.status(201).json((newMensagem as any[])[0]);
   } catch (error) {
-    console.error('Erro ao criar mensagem:', error);
+    logger.error('Erro ao criar mensagem:', error);
     res.status(500).json({ error: 'Erro ao criar mensagem automática' });
   }
 };
@@ -323,7 +324,7 @@ export const updateMensagem = async (req: Request, res: Response) => {
     
     res.json((updatedMensagem as any[])[0]);
   } catch (error) {
-    console.error('Erro ao atualizar mensagem:', error);
+    logger.error('Erro ao atualizar mensagem:', error);
     res.status(500).json({ error: 'Erro ao atualizar mensagem automática' });
   }
 };
@@ -343,7 +344,7 @@ export const deleteMensagem = async (req: Request, res: Response) => {
     
     res.json({ message: 'Mensagem deletada com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar mensagem:', error);
+    logger.error('Erro ao deletar mensagem:', error);
     res.status(500).json({ error: 'Erro ao deletar mensagem automática' });
   }
 };
@@ -370,7 +371,7 @@ export const getMensagensPredefinidas = async (req: Request, res: Response) => {
     
     res.json(rows);
   } catch (error) {
-    console.error('Erro ao buscar mensagens pré-definidas:', error);
+    logger.error('Erro ao buscar mensagens pré-definidas:', error);
     res.status(500).json({ error: 'Erro ao buscar mensagens pré-definidas' });
   }
 };
@@ -417,13 +418,13 @@ export const createMensagemPredefinida = async (req: Request, res: Response) => 
     // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
     const io = (global as any).io;
     if (io) {
-      console.log('📡 Emitindo nova mensagem pré-definida para todos os consultores...');
+      logger.info('📡 Emitindo nova mensagem pré-definida para todos os consultores...');
       io.emit('mensagem_predefinida_criada', (novaMensagem as any[])[0]);
     }
     
     res.status(201).json((novaMensagem as any[])[0]);
   } catch (error) {
-    console.error('Erro ao criar mensagem pré-definida:', error);
+    logger.error('Erro ao criar mensagem pré-definida:', error);
     res.status(500).json({ error: 'Erro ao criar mensagem pré-definida' });
   }
 };
@@ -479,13 +480,13 @@ export const updateMensagemPredefinida = async (req: Request, res: Response) => 
     // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
     const io = (global as any).io;
     if (io) {
-      console.log('📡 Emitindo atualização de mensagem pré-definida para todos os consultores...');
+      logger.info('📡 Emitindo atualização de mensagem pré-definida para todos os consultores...');
       io.emit('mensagem_predefinida_atualizada', (updatedMensagem as any[])[0]);
     }
     
     res.json((updatedMensagem as any[])[0]);
   } catch (error) {
-    console.error('Erro ao atualizar mensagem pré-definida:', error);
+    logger.error('Erro ao atualizar mensagem pré-definida:', error);
     res.status(500).json({ error: 'Erro ao atualizar mensagem pré-definida' });
   }
 };
@@ -506,13 +507,13 @@ export const deleteMensagemPredefinida = async (req: Request, res: Response) => 
     // 🔥 EMITIR EVENTO SOCKET.IO EM TEMPO REAL
     const io = (global as any).io;
     if (io) {
-      console.log('📡 Emitindo remoção de mensagem pré-definida para todos os consultores...');
+      logger.info('📡 Emitindo remoção de mensagem pré-definida para todos os consultores...');
       io.emit('mensagem_predefinida_deletada', { id });
     }
     
     res.json({ message: 'Mensagem pré-definida deletada com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar mensagem pré-definida:', error);
+    logger.error('Erro ao deletar mensagem pré-definida:', error);
     res.status(500).json({ error: 'Erro ao deletar mensagem pré-definida' });
   }
 };
@@ -531,7 +532,7 @@ export const uploadAudioPredefinido = async (req: Request, res: Response) => {
       message: 'Áudio enviado com sucesso' 
     });
   } catch (error) {
-    console.error('Erro ao fazer upload de áudio pré-definido:', error);
+    logger.error('Erro ao fazer upload de áudio pré-definido:', error);
     res.status(500).json({ error: 'Erro ao fazer upload de áudio' });
   }
 };

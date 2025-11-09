@@ -4,6 +4,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { logger } from './config/logger';
 
 // =========================================
 // LOGIN DE ADMIN
@@ -80,7 +81,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro no login admin:', error);
+    logger.error('Erro no login admin:', error);
     res.status(500).json({ error: 'Erro ao fazer login' });
   }
 };
@@ -159,8 +160,8 @@ export const getEstatisticasCRM = async (req: Request, res: Response) => {
     });
     
   } catch (error: any) {
-    console.error('Erro ao buscar estatísticas CRM:', error);
-    console.error('Stack trace:', error.stack);
+    logger.error('Erro ao buscar estatísticas CRM:', error);
+    logger.error('Stack trace:', error.stack);
     res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
   } finally {
     if (connection) connection.release();
@@ -207,7 +208,7 @@ export const getTopPerformers = async (req: Request, res: Response) => {
     res.json(topPerformers);
     
   } catch (error) {
-    console.error('Erro ao buscar top performers:', error);
+    logger.error('Erro ao buscar top performers:', error);
     res.status(500).json({ message: 'Erro ao buscar top performers' });
   } finally {
     if (connection) connection.release();
@@ -250,7 +251,7 @@ export const getDistribuicaoFunil = async (req: Request, res: Response) => {
     res.json(distribuicaoFunil);
     
   } catch (error) {
-    console.error('Erro ao buscar distribuição do funil:', error);
+    logger.error('Erro ao buscar distribuição do funil:', error);
     res.status(500).json({ message: 'Erro ao buscar distribuição do funil' });
   } finally {
     if (connection) connection.release();
@@ -312,7 +313,7 @@ export const getEstatisticasIndicacao = async (req: Request, res: Response) => {
     });
     
   } catch (error) {
-    console.error('Erro ao buscar estatísticas de indicação:', error);
+    logger.error('Erro ao buscar estatísticas de indicação:', error);
     res.status(500).json({ message: 'Erro ao buscar estatísticas de indicação' });
   } finally {
     if (connection) connection.release();
@@ -354,7 +355,7 @@ export const getTopIndicadores = async (req: Request, res: Response) => {
     res.json(topIndicadores);
     
   } catch (error) {
-    console.error('Erro ao buscar top indicadores:', error);
+    logger.error('Erro ao buscar top indicadores:', error);
     res.status(500).json({ message: 'Erro ao buscar top indicadores' });
   } finally {
     if (connection) connection.release();
@@ -453,7 +454,7 @@ export const getAlertas = async (req: Request, res: Response) => {
     res.json(alertas);
     
   } catch (error) {
-    console.error('Erro ao buscar alertas:', error);
+    logger.error('Erro ao buscar alertas:', error);
     res.status(500).json({ message: 'Erro ao buscar alertas' });
   } finally {
     if (connection) connection.release();
@@ -473,8 +474,8 @@ export const getVendedores = async (req: Request, res: Response) => {
     const userId = usuarioLogado?.id;
     const userRole = usuarioLogado?.role;
     
-    console.log('[getVendedores] User ID:', userId);
-    console.log('[getVendedores] User Role:', userRole);
+    logger.info('[getVendedores] User ID:', userId);
+    logger.info('[getVendedores] User Role:', userRole);
     
     // Construir a query com filtro baseado no role
     let whereClause = `WHERE (c.role = 'vendedor' OR c.role IS NULL OR c.role = '')`;
@@ -485,14 +486,14 @@ export const getVendedores = async (req: Request, res: Response) => {
     // - Supervisor vê: apenas o que ele cadastrou
     
     if (userRole === 'gerente' && userId) {
-      console.log('[getVendedores] Aplicando filtro de gerente (cascata)');
+      logger.info('[getVendedores] Aplicando filtro de gerente (cascata)');
       // Gerente vê vendedores que ele cadastrou OU que foram cadastrados por supervisores que ele cadastrou
       whereClause += ` AND (c.created_by = '${userId}' OR c.created_by IN (
         SELECT id FROM consultores WHERE created_by = '${userId}' AND role = 'supervisor'
       ))`;
     } else if (userRole === 'supervisor' && userId) {
       // Supervisor vê apenas os que ele cadastrou
-      console.log('[getVendedores] Aplicando filtro de supervisor');
+      logger.info('[getVendedores] Aplicando filtro de supervisor');
       whereClause += ` AND c.created_by = '${userId}'`;
     }
     // Diretor vê todos os vendedores (sem filtro adicional)
@@ -544,8 +545,8 @@ export const getVendedores = async (req: Request, res: Response) => {
     res.json(vendedoresFormatados);
     
   } catch (error: any) {
-    console.error('Erro ao buscar vendedores:', error);
-    console.error('Stack:', error.stack);
+    logger.error('Erro ao buscar vendedores:', error);
+    logger.error('Stack:', error.stack);
     res.status(500).json({ message: 'Erro ao buscar vendedores', error: error.message });
   } finally {
     if (connection) connection.release();
@@ -619,8 +620,8 @@ export const getAdmins = async (req: Request, res: Response) => {
     res.json(adminsFormatados);
     
   } catch (error: any) {
-    console.error('Erro ao buscar admins:', error);
-    console.error('Stack:', error.stack);
+    logger.error('Erro ao buscar admins:', error);
+    logger.error('Stack:', error.stack);
     res.status(500).json({ message: 'Erro ao buscar admins', error: error.message });
   } finally {
     if (connection) connection.release();
@@ -712,8 +713,8 @@ export const getIndicadores = async (req: Request, res: Response) => {
     res.json(indicadoresFormatados);
     
   } catch (error: any) {
-    console.error('Erro ao buscar indicadores:', error);
-    console.error('Stack:', error.stack);
+    logger.error('Erro ao buscar indicadores:', error);
+    logger.error('Stack:', error.stack);
     res.status(500).json({ message: 'Erro ao buscar indicadores', error: error.message });
   } finally {
     if (connection) connection.release();
@@ -756,7 +757,7 @@ export const getSolicitacoesSaque = async (req: Request, res: Response) => {
     res.json(saquesFormatados);
     
   } catch (error) {
-    console.error('Erro ao buscar solicitações de saque:', error);
+    logger.error('Erro ao buscar solicitações de saque:', error);
     res.status(500).json({ message: 'Erro ao buscar solicitações de saque' });
   } finally {
     if (connection) connection.release();
@@ -818,7 +819,7 @@ export const criarVendedor = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao criar vendedor:', error);
+    logger.error('Erro ao criar vendedor:', error);
     res.status(500).json({ message: 'Erro ao criar vendedor' });
   }
 };
@@ -882,7 +883,7 @@ export const criarIndicador = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao criar indicador:', error);
+    logger.error('Erro ao criar indicador:', error);
     res.status(500).json({ message: 'Erro ao criar indicador' });
   }
 };
@@ -949,7 +950,7 @@ export const criarAdmin = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao criar admin:', error);
+    logger.error('Erro ao criar admin:', error);
     res.status(500).json({ message: 'Erro ao criar admin' });
   }
 };
@@ -977,7 +978,7 @@ export const atualizarStatusVendedor = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao atualizar status vendedor:', error);
+    logger.error('Erro ao atualizar status vendedor:', error);
     res.status(500).json({ message: 'Erro ao atualizar status' });
   }
 };
@@ -1005,7 +1006,7 @@ export const atualizarStatusAdmin = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao atualizar status admin:', error);
+    logger.error('Erro ao atualizar status admin:', error);
     res.status(500).json({ message: 'Erro ao atualizar status' });
   }
 };
@@ -1033,7 +1034,7 @@ export const atualizarStatusIndicador = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao atualizar status indicador:', error);
+    logger.error('Erro ao atualizar status indicador:', error);
     res.status(500).json({ message: 'Erro ao atualizar status' });
   }
 };
@@ -1076,7 +1077,7 @@ export const deletarVendedor = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error: any) {
-    console.error('Erro ao deletar vendedor:', error);
+    logger.error('Erro ao deletar vendedor:', error);
     res.status(500).json({ message: 'Erro ao deletar vendedor', error: error.message });
   }
 };
@@ -1108,7 +1109,7 @@ export const deletarIndicador = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error: any) {
-    console.error('Erro ao deletar indicador:', error);
+    logger.error('Erro ao deletar indicador:', error);
     res.status(500).json({ message: 'Erro ao deletar indicador', error: error.message });
   }
 };
@@ -1168,7 +1169,7 @@ export const deletarAdmin = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error: any) {
-    console.error('Erro ao deletar admin:', error);
+    logger.error('Erro ao deletar admin:', error);
     res.status(500).json({ message: 'Erro ao deletar admin', error: error.message });
   }
 };
@@ -1224,7 +1225,7 @@ export const editarVendedor = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao editar vendedor:', error);
+    logger.error('Erro ao editar vendedor:', error);
     res.status(500).json({ message: 'Erro ao editar vendedor' });
   }
 };
@@ -1284,7 +1285,7 @@ export const editarIndicador = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao editar indicador:', error);
+    logger.error('Erro ao editar indicador:', error);
     res.status(500).json({ message: 'Erro ao editar indicador' });
   }
 };
@@ -1340,7 +1341,7 @@ export const editarAdmin = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao editar admin:', error);
+    logger.error('Erro ao editar admin:', error);
     res.status(500).json({ message: 'Erro ao editar admin' });
   }
 };
@@ -1448,8 +1449,8 @@ export const getChatsVendedores = async (req: Request, res: Response) => {
     res.json(chatsVendedores);
     
   } catch (error: any) {
-    console.error('Erro ao buscar chats dos vendedores:', error);
-    console.error('Stack:', error.stack);
+    logger.error('Erro ao buscar chats dos vendedores:', error);
+    logger.error('Stack:', error.stack);
     res.status(500).json({ message: 'Erro ao buscar chats dos vendedores', error: error.message });
   }
 };
@@ -1496,7 +1497,7 @@ export const gerarTokenTemporario = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao gerar token temporário:', error);
+    logger.error('Erro ao gerar token temporário:', error);
     res.status(500).json({ message: 'Erro ao gerar token temporário' });
   }
 };

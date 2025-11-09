@@ -8,6 +8,7 @@ import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
 import pool from '../config/database';
 import pino from 'pino';
+import { logger } from './config/logger';
 
 interface WhatsAppSession {
   sock: any;
@@ -44,7 +45,7 @@ class WhatsAppService {
     if (!numero) return '';
     
     // Log para debug
-    console.log('🔧 [NORMALIZAR] Número original:', numero);
+    logger.info('🔧 [NORMALIZAR] Número original:', numero);
     
     // Remover sufixos do WhatsApp
     let numeroLimpo = numero
@@ -55,13 +56,13 @@ class WhatsAppService {
     // Detecta se começa com '10' seguido de 11 ou mais dígitos (indicando LID)
     if (/^10\d{11,}/.test(numeroLimpo)) {
       numeroLimpo = numeroLimpo.substring(2);
-      console.log('🔧 [NORMALIZAR] Removido prefixo LID "10":', numeroLimpo);
+      logger.info('🔧 [NORMALIZAR] Removido prefixo LID "10":', numeroLimpo);
     }
     
     // Extrair apenas dígitos
     numeroLimpo = numeroLimpo.replace(/\D/g, '');
     
-    console.log('🔧 [NORMALIZAR] Número normalizado:', numeroLimpo);
+    logger.info('🔧 [NORMALIZAR] Número normalizado:', numeroLimpo);
     return numeroLimpo;
   }
 
@@ -87,14 +88,14 @@ class WhatsAppService {
   async tryReconnectExistingSessions(consultorId: string): Promise<boolean> {
     // Evitar múltiplas tentativas simultâneas
     if (this.reconnecting.has(consultorId)) {
-      console.log('⏳ Já existe uma tentativa de reconexão em andamento');
+      logger.info('⏳ Já existe uma tentativa de reconexão em andamento');
       return false;
     }
 
     // Verificar se já está conectado
     const session = this.sessions.get(consultorId);
     if (session?.connected) {
-      console.log('✅ Sessão já está conectada');
+      logger.info('✅ Sessão já está conectada');
       return true;
     }
 
@@ -103,11 +104,11 @@ class WhatsAppService {
     const authPath = `./auth_sessions/auth_${consultorId}`;
     
     if (!fs.existsSync(authPath)) {
-      console.log('📁 Nenhuma sessão salva encontrada');
+      logger.info('📁 Nenhuma sessão salva encontrada');
       return false;
     }
 
-    console.log('🔄 Tentando reconectar sessão existente...');
+    logger.info('🔄 Tentando reconectar sessão existente...');
     this.reconnecting.add(consultorId);
 
     try {
@@ -116,7 +117,7 @@ class WhatsAppService {
       this.reconnecting.delete(consultorId);
       return true;
     } catch (error) {
-      console.error('❌ Erro ao reconectar:', error);
+      logger.error('❌ Erro ao reconectar:', error);
       this.reconnecting.delete(consultorId);
       return false;
     }
@@ -127,7 +128,7 @@ class WhatsAppService {
       // Verificar se já está conectando/conectado
       const existingSession = this.sessions.get(consultorId);
       if (existingSession && existingSession.connected) {
-        console.log('✅ WhatsApp já está conectado');
+        logger.info('✅ WhatsApp já está conectado');
         return null;
       }
 
@@ -162,11 +163,11 @@ class WhatsAppService {
       // Se for a primeira conexão, randomizar o índice inicial
       if (!this.consultorBrowserIndex.has(consultorId)) {
         currentIndex = Math.floor(Math.random() * browsersReais.length);
-        console.log(`🎲 Primeira conexão: índice inicial aleatório = ${currentIndex}`);
+        logger.info(`🎲 Primeira conexão: índice inicial aleatório = ${currentIndex}`);
       } else {
         // Em reconexões subsequentes, incrementar para variar o User-Agent
         currentIndex = (currentIndex + 1) % browsersReais.length;
-        console.log(`🔄 Reconexão detectada: rotacionando para índice = ${currentIndex}`);
+        logger.info(`🔄 Reconexão detectada: rotacionando para índice = ${currentIndex}`);
       }
       
       // Armazenar o próximo índice para a próxima conexão
@@ -181,14 +182,14 @@ class WhatsAppService {
       const queryTimeout = 50000 + Math.floor(Math.random() * 20000); // 50-70s
       const keepAliveInterval = 25000 + Math.floor(Math.random() * 10000); // 25-35s
       
-      console.log(`⏱️ Timeouts randomizados: connect=${Math.round(connectTimeout/1000)}s, query=${Math.round(queryTimeout/1000)}s, keepAlive=${Math.round(keepAliveInterval/1000)}s`);
+      logger.info(`⏱️ Timeouts randomizados: connect=${Math.round(connectTimeout/1000)}s, query=${Math.round(queryTimeout/1000)}s, keepAlive=${Math.round(keepAliveInterval/1000)}s`);
       
       // ✅ CORREÇÃO ERRO 11: Reduzir retries e randomizar delay
       // 5 retries = bot comercial. 2 retries = comportamento humano mais realista.
       const retryDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms (não sempre 250ms)
       const maxRetries = 2; // Humanos raramente tentam mais que 2 vezes
       
-      console.log(`🔄 Retry config: delay=${retryDelay}ms, maxRetries=${maxRetries}`);
+      logger.info(`🔄 Retry config: delay=${retryDelay}ms, maxRetries=${maxRetries}`);
       
       const sock = makeWASocket({
         auth: state,
@@ -206,7 +207,7 @@ class WhatsAppService {
         markOnlineOnConnect: false,
       });
       
-      console.log('✅ Usando browser identifier realista:', browserAleatorio.join(' / '));
+      logger.info('✅ Usando browser identifier realista:', browserAleatorio.join(' / '));
 
       sock.ev.on('creds.update', saveCreds);
 
@@ -239,8 +240,8 @@ class WhatsAppService {
             const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
             const errorMsg = (lastDisconnect?.error as any)?.message || 'Desconhecido';
 
-            console.log(`❌ WhatsApp desconectado. Motivo: ${errorMsg} (Code: ${statusCode})`);
-            console.log(`� Status Code: ${statusCode}, Logout Code: ${DisconnectReason.loggedOut}`);
+            logger.info(`❌ WhatsApp desconectado. Motivo: ${errorMsg} (Code: ${statusCode})`);
+            logger.info(`� Status Code: ${statusCode}, Logout Code: ${DisconnectReason.loggedOut}`);
             
             // Remover sessão do map SEMPRE
             this.sessions.delete(consultorId);
@@ -256,13 +257,13 @@ class WhatsAppService {
               
               // Resetar contador se passaram mais de 5 minutos desde a última tentativa
               if (now - attempts.lastAttempt > this.RECONNECT_RESET_TIME) {
-                console.log('� Resetando contador de tentativas (passou 5 minutos)');
+                logger.info('� Resetando contador de tentativas (passou 5 minutos)');
                 attempts.count = 0;
               }
               
               if (attempts.count >= this.MAX_RECONNECT_ATTEMPTS) {
-                console.log(`⚠️ Máximo de ${this.MAX_RECONNECT_ATTEMPTS} tentativas atingido. Limpando sessão...`);
-                console.log(`📊 Tentativas realizadas: ${attempts.count} | Última tentativa: ${new Date(attempts.lastAttempt).toLocaleString()}`);
+                logger.info(`⚠️ Máximo de ${this.MAX_RECONNECT_ATTEMPTS} tentativas atingido. Limpando sessão...`);
+                logger.info(`📊 Tentativas realizadas: ${attempts.count} | Última tentativa: ${new Date(attempts.lastAttempt).toLocaleString()}`);
                 
                 // Limpar contador e prosseguir para limpeza de sessão
                 this.reconnectAttempts.delete(consultorId);
@@ -272,8 +273,8 @@ class WhatsAppService {
                 attempts.lastAttempt = now;
                 this.reconnectAttempts.set(consultorId, attempts);
                 
-                console.log(`🔄 Erro de conexão detectado (${errorMsg}). Tentativa ${attempts.count}/${this.MAX_RECONNECT_ATTEMPTS}`);
-                console.log(`📋 Status Code: ${statusCode} | Motivo: ${errorMsg}`);
+                logger.info(`🔄 Erro de conexão detectado (${errorMsg}). Tentativa ${attempts.count}/${this.MAX_RECONNECT_ATTEMPTS}`);
+                logger.info(`📋 Status Code: ${statusCode} | Motivo: ${errorMsg}`);
                 
                 // Atualizar status no banco
                 await pool.query(
@@ -298,11 +299,11 @@ class WhatsAppService {
                 const exponentialDelay = baseDelay * Math.pow(2, attempts.count - 1); // 2^(tentativa-1)
                 const totalDelay = Math.min(exponentialDelay + jitter, 300000); // Máximo 5 minutos
                 
-                console.log(`⏱️ Aguardando ${Math.round(totalDelay / 1000)}s antes de reconectar (base: ${baseDelay/1000}s, exponencial: ${Math.round(exponentialDelay/1000)}s, jitter: ${Math.round(jitter/1000)}s)`);
+                logger.info(`⏱️ Aguardando ${Math.round(totalDelay / 1000)}s antes de reconectar (base: ${baseDelay/1000}s, exponencial: ${Math.round(exponentialDelay/1000)}s, jitter: ${Math.round(jitter/1000)}s)`);
                 
                 setTimeout(() => {
                   this.conectar(consultorId).catch(err => {
-                    console.error('❌ Erro ao reconectar:', err);
+                    logger.error('❌ Erro ao reconectar:', err);
                   });
                 }, totalDelay);
                 
@@ -313,9 +314,9 @@ class WhatsAppService {
             
             // Se chegou aqui, é logout manual OU atingiu máximo de tentativas - LIMPAR TUDO
             if (isManualLogout) {
-              console.log('🗑️ LOGOUT MANUAL DETECTADO - Limpando sessão automaticamente...');
+              logger.info('🗑️ LOGOUT MANUAL DETECTADO - Limpando sessão automaticamente...');
             } else {
-              console.log('🗑️ MÁXIMO DE TENTATIVAS ATINGIDO - Limpando sessão automaticamente...');
+              logger.info('🗑️ MÁXIMO DE TENTATIVAS ATINGIDO - Limpando sessão automaticamente...');
             }
             
             this.sessions.delete(consultorId);
@@ -324,12 +325,12 @@ class WhatsAppService {
               const path = require('path');
               const authPath = path.join(process.cwd(), 'auth_sessions', `auth_${consultorId}`);
               
-              console.log(`📂 Verificando pasta: ${authPath}`);
+              logger.info(`📂 Verificando pasta: ${authPath}`);
               
               // Deletar pasta de autenticação de forma mais robusta
               try {
                 if (fs.existsSync(authPath)) {
-                  console.log('🗑️ Deletando arquivos de autenticação...');
+                  logger.info('🗑️ Deletando arquivos de autenticação...');
                   
                   // Usar rmSync com opções mais agressivas
                   fs.rmSync(authPath, { 
@@ -341,27 +342,27 @@ class WhatsAppService {
                   
                   // Verificar se foi realmente deletado
                   if (!fs.existsSync(authPath)) {
-                    console.log('✅ Arquivos de autenticação removidos com sucesso!');
+                    logger.info('✅ Arquivos de autenticação removidos com sucesso!');
                   } else {
-                    console.warn('⚠️ Pasta ainda existe após tentativa de remoção');
+                    logger.warn('⚠️ Pasta ainda existe após tentativa de remoção');
                   }
                 } else {
-                  console.log('ℹ️ Pasta de autenticação não encontrada (já foi removida?)');
+                  logger.info('ℹ️ Pasta de autenticação não encontrada (já foi removida?)');
                 }
               } catch (deleteError) {
-                console.error('❌ Erro ao deletar pasta de autenticação:', deleteError);
+                logger.error('❌ Erro ao deletar pasta de autenticação:', deleteError);
                 // Tentar método alternativo
                 try {
-                  console.log('🔄 Tentando método alternativo de remoção...');
+                  logger.info('🔄 Tentando método alternativo de remoção...');
                   const { execSync } = require('child_process');
                   if (process.platform === 'win32') {
                     execSync(`rmdir /s /q "${authPath}"`, { stdio: 'ignore' });
                   } else {
                     execSync(`rm -rf "${authPath}"`, { stdio: 'ignore' });
                   }
-                  console.log('✅ Pasta removida com comando do sistema');
+                  logger.info('✅ Pasta removida com comando do sistema');
                 } catch (cmdError) {
-                  console.error('❌ Falha no método alternativo:', cmdError);
+                  logger.error('❌ Falha no método alternativo:', cmdError);
                 }
               }
               
@@ -370,7 +371,7 @@ class WhatsAppService {
                 'UPDATE consultores SET status_conexao = ?, sessao_whatsapp = NULL WHERE id = ?',
                 ['offline', consultorId]
               );
-              console.log('✅ Status atualizado no banco: offline');
+              logger.info('✅ Status atualizado no banco: offline');
 
               // Emitir evento de desconexão para o frontend
               if (this.io) {
@@ -388,17 +389,17 @@ class WhatsAppService {
                   message: 'WhatsApp desconectado. Sessão limpa automaticamente.'
                 });
                 
-                console.log('📡 Evento de desconexão emitido para o frontend e admins');
+                logger.info('📡 Evento de desconexão emitido para o frontend e admins');
               }
 
             resolve(null);
           } else if (connection === 'open') {
-            console.log('✅ WhatsApp conectado para consultor:', consultorId);
+            logger.info('✅ WhatsApp conectado para consultor:', consultorId);
             
             // ✅ Resetar contador de tentativas de reconexão ao conectar com sucesso
             const attempts = this.reconnectAttempts.get(consultorId);
             if (attempts && attempts.count > 0) {
-              console.log(`🎉 Reconexão bem-sucedida após ${attempts.count} tentativa(s)!`);
+              logger.info(`🎉 Reconexão bem-sucedida após ${attempts.count} tentativa(s)!`);
               this.reconnectAttempts.delete(consultorId);
             }
 
@@ -409,10 +410,10 @@ class WhatsAppService {
               if (user?.id) {
                 // Número vem no formato: 5511999999999:XX@s.whatsapp.net
                 numeroWhatsapp = user.id.split(':')[0].replace('@s.whatsapp.net', '');
-                console.log('📱 Número WhatsApp capturado:', numeroWhatsapp);
+                logger.info('📱 Número WhatsApp capturado:', numeroWhatsapp);
               }
             } catch (error) {
-              console.log('⚠️ Não foi possível capturar número do WhatsApp');
+              logger.info('⚠️ Não foi possível capturar número do WhatsApp');
             }
 
             const session: WhatsAppSession = {
@@ -452,16 +453,16 @@ class WhatsAppService {
         // Timeout de 60 segundos para gerar QR Code
         setTimeout(() => {
           if (!this.sessions.get(consultorId)?.connected) {
-            console.log('⏰ Timeout ao gerar QR Code');
+            logger.info('⏰ Timeout ao gerar QR Code');
             sock.end(undefined);
             resolve(null);
           }
         }, 60000);
 
         // Receber mensagens
-        console.log('🔧 [DEBUG] Registrando listener messages.upsert para consultor:', consultorId);
+        logger.info('🔧 [DEBUG] Registrando listener messages.upsert para consultor:', consultorId);
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-          console.log('📨 [DEBUG] Evento messages.upsert recebido:', {
+          logger.info('📨 [DEBUG] Evento messages.upsert recebido:', {
             type,
             quantidade: messages.length,
             consultorId
@@ -472,7 +473,7 @@ class WhatsAppService {
           // 'notify' é usado quando RECEBE mensagens de outros (fromMe: false)
           if (type === 'notify') {
             for (const message of messages) {
-              console.log('🔍 [DEBUG] Mensagem recebida:', {
+              logger.info('🔍 [DEBUG] Mensagem recebida:', {
                 messageId: message.key.id,
                 fromMe: message.key.fromMe,
                 remoteJid: message.key.remoteJid,
@@ -483,11 +484,11 @@ class WhatsAppService {
               if (!message.key.fromMe && message.message) {
                 await this.processarMensagemRecebida(consultorId, message);
               } else if (message.key.fromMe) {
-                console.log('⏩ [IGNORANDO] Mensagem fromMe (enviada por mim), já foi salva no método enviarMensagem');
+                logger.info('⏩ [IGNORANDO] Mensagem fromMe (enviada por mim), já foi salva no método enviarMensagem');
               }
             }
           } else {
-            console.log(`⏩ [IGNORANDO] Evento tipo '${type}' (não é 'notify'). Mensagens enviadas são salvas no método enviarMensagem.`);
+            logger.info(`⏩ [IGNORANDO] Evento tipo '${type}' (não é 'notify'). Mensagens enviadas são salvas no método enviarMensagem.`);
           }
         });
 
@@ -501,7 +502,7 @@ class WhatsAppService {
         });
       });
     } catch (error) {
-      console.error('Erro ao conectar WhatsApp:', error);
+      logger.error('Erro ao conectar WhatsApp:', error);
       throw error;
     }
   }
@@ -509,42 +510,42 @@ class WhatsAppService {
   async desconectar(consultorId: string) {
     const session = this.sessions.get(consultorId);
     
-    console.log('🔌 Iniciando desconexão do WhatsApp para consultor:', consultorId);
+    logger.info('🔌 Iniciando desconexão do WhatsApp para consultor:', consultorId);
     
     if (session?.sock) {
       try {
         // 1. Fazer logout do WhatsApp
-        console.log('📤 Fazendo logout do WhatsApp...');
+        logger.info('📤 Fazendo logout do WhatsApp...');
         await session.sock.logout();
-        console.log('✅ Logout realizado');
+        logger.info('✅ Logout realizado');
       } catch (error) {
-        console.error('⚠️ Erro ao fazer logout (continuando mesmo assim):', error);
+        logger.error('⚠️ Erro ao fazer logout (continuando mesmo assim):', error);
       }
       
       // 2. Fechar o socket
       try {
-        console.log('🔌 Fechando socket...');
+        logger.info('🔌 Fechando socket...');
         await session.sock.end(undefined);
-        console.log('✅ Socket fechado');
+        logger.info('✅ Socket fechado');
       } catch (error) {
-        console.error('⚠️ Erro ao fechar socket:', error);
+        logger.error('⚠️ Erro ao fechar socket:', error);
       }
     }
     
     // 3. Remover sessão do Map (sempre, mesmo se não tinha socket)
     this.sessions.delete(consultorId);
-    console.log('✅ Sessão removida do Map');
+    logger.info('✅ Sessão removida do Map');
     
     // 4. Deletar pasta de autenticação
     const fs = require('fs');
     const path = require('path');
     const authPath = path.join(process.cwd(), 'auth_sessions', `auth_${consultorId}`);
     
-    console.log(`📂 Verificando pasta de autenticação: ${authPath}`);
+    logger.info(`📂 Verificando pasta de autenticação: ${authPath}`);
     
     try {
       if (fs.existsSync(authPath)) {
-        console.log('🗑️ Deletando arquivos de autenticação...');
+        logger.info('🗑️ Deletando arquivos de autenticação...');
         
         // Usar rmSync com opções robustas
         fs.rmSync(authPath, { 
@@ -556,9 +557,9 @@ class WhatsAppService {
         
         // Verificar se foi realmente deletado
         if (!fs.existsSync(authPath)) {
-          console.log('✅ Arquivos de autenticação removidos com sucesso!');
+          logger.info('✅ Arquivos de autenticação removidos com sucesso!');
         } else {
-          console.warn('⚠️ Pasta ainda existe após tentativa de remoção');
+          logger.warn('⚠️ Pasta ainda existe após tentativa de remoção');
           
           // Tentar método alternativo
           try {
@@ -568,33 +569,33 @@ class WhatsAppService {
             } else {
               execSync(`rm -rf "${authPath}"`, { stdio: 'ignore' });
             }
-            console.log('✅ Pasta removida com comando do sistema');
+            logger.info('✅ Pasta removida com comando do sistema');
           } catch (cmdError) {
-            console.error('❌ Falha no método alternativo:', cmdError);
+            logger.error('❌ Falha no método alternativo:', cmdError);
           }
         }
       } else {
-        console.log('ℹ️ Pasta de autenticação não encontrada (já foi removida?)');
+        logger.info('ℹ️ Pasta de autenticação não encontrada (já foi removida?)');
       }
     } catch (deleteError) {
-      console.error('❌ Erro ao deletar pasta de autenticação:', deleteError);
+      logger.error('❌ Erro ao deletar pasta de autenticação:', deleteError);
     }
     
     // 5. Atualizar banco de dados
     try {
-      console.log('💾 Atualizando status no banco de dados...');
+      logger.info('💾 Atualizando status no banco de dados...');
       await pool.query(
         'UPDATE consultores SET status_conexao = ?, sessao_whatsapp = NULL, numero_whatsapp = NULL WHERE id = ?',
         ['offline', consultorId]
       );
-      console.log('✅ Status atualizado no banco: offline');
+      logger.info('✅ Status atualizado no banco: offline');
     } catch (dbError) {
-      console.error('❌ Erro ao atualizar banco de dados:', dbError);
+      logger.error('❌ Erro ao atualizar banco de dados:', dbError);
     }
     
     // 6. Emitir eventos Socket.IO
     if (this.io) {
-      console.log('📡 Emitindo eventos de desconexão...');
+      logger.info('📡 Emitindo eventos de desconexão...');
       
       // Para o consultor
       this.io.to(`consultor_${consultorId}`).emit('whatsapp_disconnected', {
@@ -610,10 +611,10 @@ class WhatsAppService {
         message: 'WhatsApp desconectado com sucesso. Sessão limpa.'
       });
       
-      console.log('✅ Eventos Socket.IO emitidos');
+      logger.info('✅ Eventos Socket.IO emitidos');
     }
     
-    console.log('🎉 Desconexão concluída com sucesso!');
+    logger.info('🎉 Desconexão concluída com sucesso!');
   }
 
   async enviarMensagem(consultorId: string, numero: string, conteudo: string, leadIdEspecifico?: string) {
@@ -626,7 +627,7 @@ class WhatsAppService {
     try {
       // ✅ NORMALIZAR NÚMERO antes de enviar (remove @lid, prefixos especiais)
       const numeroNormalizado = this.normalizarNumero(numero);
-      console.log('📤 [ENVIAR] Número original:', numero, '→ Normalizado:', numeroNormalizado);
+      logger.info('📤 [ENVIAR] Número original:', numero, '→ Normalizado:', numeroNormalizado);
       
       // Formatar número corretamente para JID do WhatsApp
       const jid = `${numeroNormalizado}@s.whatsapp.net`;
@@ -634,11 +635,11 @@ class WhatsAppService {
       // ✅ CORREÇÃO ERRO 6 e 7: Simular comportamento humano com delays e typing
       // FASE 1: Simular tempo de leitura (2-5 segundos)
       const tempoLeitura = 2000 + Math.random() * 3000;
-      console.log(`⏱️ Simulando leitura: ${Math.round(tempoLeitura / 1000)}s`);
+      logger.info(`⏱️ Simulando leitura: ${Math.round(tempoLeitura / 1000)}s`);
       await new Promise(resolve => setTimeout(resolve, tempoLeitura));
       
       // FASE 2: Enviar presença "digitando..." (CRÍTICO para evitar detecção)
-      console.log('⌨️ Enviando presença "composing" (digitando...)');
+      logger.info('⌨️ Enviando presença "composing" (digitando...)');
       await session.sock.sendPresenceUpdate('composing', jid);
       
       // FASE 3: Simular tempo de digitação baseado no tamanho da mensagem
@@ -649,11 +650,11 @@ class WhatsAppService {
       const variacaoDigitacao = Math.random() * 2000; // +0-2s de variação
       const tempoDigitacao = tempoDigitacaoBase + variacaoDigitacao;
       
-      console.log(`⌨️ Simulando digitação: ${Math.round(tempoDigitacao / 1000)}s (${conteudo.length} caracteres)`);
+      logger.info(`⌨️ Simulando digitação: ${Math.round(tempoDigitacao / 1000)}s (${conteudo.length} caracteres)`);
       await new Promise(resolve => setTimeout(resolve, tempoDigitacao));
       
       // FASE 4: Parar de "digitar" e marcar como disponível
-      console.log('✋ Parando de digitar (paused)');
+      logger.info('✋ Parando de digitar (paused)');
       await session.sock.sendPresenceUpdate('paused', jid);
       
       // FASE 5: Pequeno delay final antes de enviar (100-500ms)
@@ -661,7 +662,7 @@ class WhatsAppService {
       await new Promise(resolve => setTimeout(resolve, delayFinal));
       
       // FASE 6: Finalmente enviar a mensagem
-      console.log('📤 Enviando mensagem agora...');
+      logger.info('📤 Enviando mensagem agora...');
       // ✅ CORREÇÃO ERRO 3: Adicionar contextInfo para evitar detecção de bot
       // WhatsApp Web SEMPRE envia contextInfo - mensagens sem isso são suspeitas
       const sentMsg = await session.sock.sendMessage(jid, { 
@@ -674,13 +675,13 @@ class WhatsAppService {
       });
       const whatsappMessageId = sentMsg?.key?.id || null;
       
-      console.log('📤 Mensagem enviada com WhatsApp ID:', whatsappMessageId);
+      logger.info('📤 Mensagem enviada com WhatsApp ID:', whatsappMessageId);
 
       // ✅ USAR lead_id específico se fornecido, senão buscar pelo telefone
       let leadId: string;
       
       if (leadIdEspecifico) {
-        console.log('✅ Usando lead_id específico fornecido:', leadIdEspecifico);
+        logger.info('✅ Usando lead_id específico fornecido:', leadIdEspecifico);
         leadId = leadIdEspecifico;
       } else {
         // Buscar lead_id pelo telefone normalizado (comportamento antigo)
@@ -694,7 +695,7 @@ class WhatsAppService {
         }
 
         leadId = (leadRows as any[])[0].id;
-        console.log('📋 Lead encontrado pelo telefone normalizado:', leadId);
+        logger.info('📋 Lead encontrado pelo telefone normalizado:', leadId);
       }
 
       // Salvar no banco COM O ID DO WHATSAPP
@@ -716,7 +717,7 @@ class WhatsAppService {
         
         if ((selectRows as any[]).length > 0) {
           mensagemId = (selectRows as any[])[0].id;
-          console.log('✅ ID da mensagem recuperado:', mensagemId);
+          logger.info('✅ ID da mensagem recuperado:', mensagemId);
         }
       }
 
@@ -732,7 +733,7 @@ class WhatsAppService {
 
       return { success: true };
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      logger.error('Erro ao enviar mensagem:', error);
       throw error;
     }
   }
@@ -765,7 +766,7 @@ class WhatsAppService {
         mediaUrl = `/uploads/${fileName}`;
       }
       
-      console.log('📁 [DEBUG] Media URL calculada:', mediaUrl);
+      logger.info('📁 [DEBUG] Media URL calculada:', mediaUrl);
       
       // ✅ BUSCAR LEAD_ID PRIMEIRO (evitar falha silenciosa do SUBSELECT)
       const [leadRows2] = await pool.query(
@@ -778,7 +779,7 @@ class WhatsAppService {
       }
       
       const leadId = (leadRows2 as any[])[0].id;
-      console.log('📋 [DEBUG] Lead encontrado:', leadId);
+      logger.info('📋 [DEBUG] Lead encontrado:', leadId);
       
       // ✅ SALVAR NO BANCO PRIMEIRO (antes de tentar enviar pelo WhatsApp)
       // Mapear tipo do WhatsApp para tipo do frontend
@@ -797,7 +798,7 @@ class WhatsAppService {
       // ✅ CRÍTICO: Salvar no banco com tratamento de erro explícito
       let mensagemId = null;
       try {
-        console.log('💾 [PRE-INSERT] Tentando inserir no banco:', { leadId, consultorId, conteudo: conteudo.substring(0, 30), tipoMapeado, mediaUrl, fileName });
+        logger.info('💾 [PRE-INSERT] Tentando inserir no banco:', { leadId, consultorId, conteudo: conteudo.substring(0, 30), tipoMapeado, mediaUrl, fileName });
         
         const insertResult2 = await pool.query(
           `INSERT INTO mensagens (lead_id, consultor_id, conteudo, tipo, remetente, status, media_url, media_name, timestamp)
@@ -805,12 +806,12 @@ class WhatsAppService {
           [leadId, consultorId, conteudo, tipoMapeado, mediaUrl, fileName]
         );
         
-        console.log('💾 [POST-INSERT] Resultado do INSERT:', JSON.stringify(insertResult2, null, 2));
-        console.log('💾 [POST-INSERT] insertResult.affectedRows:', (insertResult2 as any).affectedRows);
+        logger.info('💾 [POST-INSERT] Resultado do INSERT:', JSON.stringify(insertResult2, null, 2));
+        logger.info('💾 [POST-INSERT] insertResult.affectedRows:', (insertResult2 as any).affectedRows);
         
         // ✅ CORREÇÃO: UUID não retorna insertId válido, precisamos fazer SELECT
         if ((insertResult2 as any).affectedRows && (insertResult2 as any).affectedRows > 0) {
-          console.log('✅ INSERT bem-sucedido, buscando UUID gerado...');
+          logger.info('✅ INSERT bem-sucedido, buscando UUID gerado...');
           const [selectRows2] = await pool.query(
             `SELECT id FROM mensagens 
              WHERE lead_id = ? AND consultor_id = ? AND media_url = ? AND remetente = 'consultor'
@@ -820,16 +821,16 @@ class WhatsAppService {
           
           if ((selectRows2 as any[]).length > 0) {
             mensagemId = (selectRows2 as any[])[0].id;
-            console.log('✅ UUID recuperado com sucesso:', mensagemId);
+            logger.info('✅ UUID recuperado com sucesso:', mensagemId);
           } else {
-            console.error('❌ Não foi possível recuperar UUID após INSERT');
+            logger.error('❌ Não foi possível recuperar UUID após INSERT');
           }
         }
         
-        console.log('💾 [DEBUG] Mensagem salva no banco! ID final:', mensagemId, 'mediaUrl:', mediaUrl, 'fileName:', fileName);
+        logger.info('💾 [DEBUG] Mensagem salva no banco! ID final:', mensagemId, 'mediaUrl:', mediaUrl, 'fileName:', fileName);
       } catch (dbError) {
-        console.error('❌ [ERRO CRÍTICO] Falha ao salvar mensagem no banco de dados:', dbError);
-        console.error('Detalhes:', { leadId, consultorId, conteudo, tipoMapeado, mediaUrl, fileName });
+        logger.error('❌ [ERRO CRÍTICO] Falha ao salvar mensagem no banco de dados:', dbError);
+        logger.error('Detalhes:', { leadId, consultorId, conteudo, tipoMapeado, mediaUrl, fileName });
         throw new Error('Falha ao salvar mensagem no banco de dados: ' + (dbError as Error).message);
       }
       
@@ -872,7 +873,7 @@ class WhatsAppService {
         const sentMsg = await session.sock.sendMessage(jid, messageContent);
         whatsappMessageId = sentMsg?.key?.id || null;
         
-        console.log('📤 Arquivo enviado com WhatsApp ID:', whatsappMessageId);
+        logger.info('📤 Arquivo enviado com WhatsApp ID:', whatsappMessageId);
         
         // Atualizar mensagem com whatsapp_message_id
         if (whatsappMessageId) {
@@ -887,10 +888,10 @@ class WhatsAppService {
              LIMIT 1`,
             [whatsappMessageId, numero.replace(/\D/g, ''), consultorId, mediaUrl]
           );
-          console.log('✅ WhatsApp Message ID atualizado no banco');
+          logger.info('✅ WhatsApp Message ID atualizado no banco');
         }
       } catch (whatsappError) {
-        console.error('⚠️ Erro ao enviar pelo WhatsApp, mas mensagem JÁ FOI SALVA no banco:', whatsappError);
+        logger.error('⚠️ Erro ao enviar pelo WhatsApp, mas mensagem JÁ FOI SALVA no banco:', whatsappError);
         // Não lançar erro - a mensagem está salva e será exibida no frontend
       }
 
@@ -901,10 +902,10 @@ class WhatsAppService {
         [conteudo.substring(0, 50), numero.replace(/\D/g, '')]
       );
 
-      console.log(`✅ ${tipoTexto} enviado com sucesso para ${numero}`);
+      logger.info(`✅ ${tipoTexto} enviado com sucesso para ${numero}`);
       return { success: true };
     } catch (error) {
-      console.error('Erro ao enviar arquivo:', error);
+      logger.error('Erro ao enviar arquivo:', error);
       throw error;
     }
   }
@@ -928,7 +929,7 @@ class WhatsAppService {
       
       if (!numero) return;
       
-      console.log(`✅ Atualizando status da mensagem para ${numero}: ${novoStatus}`);
+      logger.info(`✅ Atualizando status da mensagem para ${numero}: ${novoStatus}`);
       
       // Buscar lead pelo telefone
       const [leadRows3] = await pool.query(
@@ -937,7 +938,7 @@ class WhatsAppService {
       );
       
       if ((leadRows3 as any[]).length === 0) {
-        console.log('⚠️ Lead não encontrado para atualização de status');
+        logger.info('⚠️ Lead não encontrado para atualização de status');
         return;
       }
       
@@ -964,9 +965,9 @@ class WhatsAppService {
         });
       }
       
-      console.log(`✅ Status atualizado para: ${novoStatus}`);
+      logger.info(`✅ Status atualizado para: ${novoStatus}`);
     } catch (error) {
-      console.error('❌ Erro ao atualizar status da mensagem:', error);
+      logger.error('❌ Erro ao atualizar status da mensagem:', error);
     }
   }
 
@@ -974,7 +975,7 @@ class WhatsAppService {
     try {
       // ✅ VERIFICAR SE MENSAGEM JÁ EXISTE NO BANCO (evita duplicação no re-sync)
       const whatsappMessageId = message.key.id;
-      console.log('🔍 [DEBUG] Processando mensagem - WhatsApp ID:', whatsappMessageId);
+      logger.info('🔍 [DEBUG] Processando mensagem - WhatsApp ID:', whatsappMessageId);
       
       if (whatsappMessageId) {
         const [msgRows] = await pool.query(
@@ -982,14 +983,14 @@ class WhatsAppService {
           [whatsappMessageId]
         );
         
-        console.log('🔍 [DEBUG] Verificação de duplicidade:', {
+        logger.info('🔍 [DEBUG] Verificação de duplicidade:', {
           whatsappMessageId,
           existeNoBanco: (msgRows as any[]).length > 0,
           resultado: (msgRows as any[]).length > 0 ? 'IGNORAR' : 'PROCESSAR'
         });
         
         if ((msgRows as any[]).length > 0) {
-          console.log(`⏩ [DUPLICIDADE DETECTADA] Mensagem já existe no banco (WhatsApp ID: ${whatsappMessageId}), ignorando re-sincronização`);
+          logger.info(`⏩ [DUPLICIDADE DETECTADA] Mensagem já existe no banco (WhatsApp ID: ${whatsappMessageId}), ignorando re-sincronização`);
           return;
         }
       }
@@ -1009,8 +1010,8 @@ class WhatsAppService {
       // Processar mensagem de áudio
       if (message.message?.audioMessage) {
         const audioMessage = message.message.audioMessage;
-        console.log(`🎤 Áudio recebido de ${numero}`);
-        console.log('📋 Detalhes do áudio:', JSON.stringify(audioMessage, null, 2));
+        logger.info(`🎤 Áudio recebido de ${numero}`);
+        logger.info('📋 Detalhes do áudio:', JSON.stringify(audioMessage, null, 2));
         
         try {
           const fs = require('fs');
@@ -1020,15 +1021,15 @@ class WhatsAppService {
           // process.cwd() já aponta para a pasta backend quando o servidor está rodando
           const uploadsDir = path.join(process.cwd(), 'uploads', 'audios');
           if (!fs.existsSync(uploadsDir)) {
-            console.log('📁 Criando diretório de uploads...');
+            logger.info('📁 Criando diretório de uploads...');
             fs.mkdirSync(uploadsDir, { recursive: true });
-            console.log('✅ Diretório criado:', uploadsDir);
+            logger.info('✅ Diretório criado:', uploadsDir);
           } else {
-            console.log('📁 Diretório já existe:', uploadsDir);
+            logger.info('📁 Diretório já existe:', uploadsDir);
           }
           
           // Baixar áudio - passar consultorId para pegar socket correto
-          console.log('📥 Tentando baixar áudio...');
+          logger.info('📥 Tentando baixar áudio...');
           const buffer = await this.downloadMedia(message, consultorId);
           
           if (buffer && buffer.length > 0) {
@@ -1036,13 +1037,13 @@ class WhatsAppService {
             const fileName = `audio_${Date.now()}_${numero}.ogg`;
             const filePath = path.join(uploadsDir, fileName);
             
-            console.log(`💾 Salvando arquivo em: ${filePath}`);
+            logger.info(`💾 Salvando arquivo em: ${filePath}`);
             fs.writeFileSync(filePath, buffer);
             
             // Verificar se foi salvo
             if (fs.existsSync(filePath)) {
               const stats = fs.statSync(filePath);
-              console.log(`✅ Arquivo salvo com sucesso! Tamanho: ${stats.size} bytes`);
+              logger.info(`✅ Arquivo salvo com sucesso! Tamanho: ${stats.size} bytes`);
               
               tipo = 'audio';
               const duracao = audioMessage.seconds || 0;
@@ -1050,16 +1051,16 @@ class WhatsAppService {
               mediaUrl = `/uploads/audios/${fileName}`;
               mediaName = fileName;
             } else {
-              console.error('❌ Arquivo não foi salvo!');
+              logger.error('❌ Arquivo não foi salvo!');
               conteudo = '🎤 Áudio (erro ao salvar)';
             }
           } else {
-            console.error('❌ Buffer vazio ou nulo! Tamanho:', buffer?.length || 0);
+            logger.error('❌ Buffer vazio ou nulo! Tamanho:', buffer?.length || 0);
             conteudo = '🎤 Áudio (erro no download)';
           }
         } catch (error) {
-          console.error('❌ Erro ao processar áudio:', error);
-          console.error('Stack:', (error as Error).stack);
+          logger.error('❌ Erro ao processar áudio:', error);
+          logger.error('Stack:', (error as Error).stack);
           conteudo = '🎤 Áudio (erro ao baixar)';
         }
       }
@@ -1067,7 +1068,7 @@ class WhatsAppService {
       // Processar mensagem de imagem
       else if (message.message?.imageMessage) {
         const imageMessage = message.message.imageMessage;
-        console.log(`📷 Imagem recebida de ${numero}`);
+        logger.info(`📷 Imagem recebida de ${numero}`);
         
         try {
           const fs = require('fs');
@@ -1092,7 +1093,7 @@ class WhatsAppService {
             fs.writeFileSync(filePath, buffer);
             
             if (fs.existsSync(filePath)) {
-              console.log(`✅ Imagem salva com sucesso! Tamanho: ${buffer.length} bytes`);
+              logger.info(`✅ Imagem salva com sucesso! Tamanho: ${buffer.length} bytes`);
               tipo = 'imagem';
               mediaUrl = `/uploads/images/${fileName}`;
               mediaName = fileName;
@@ -1100,15 +1101,15 @@ class WhatsAppService {
               const caption = imageMessage.caption;
               if (caption) conteudo += `: ${caption}`;
             } else {
-              console.error('❌ Arquivo de imagem não foi salvo!');
+              logger.error('❌ Arquivo de imagem não foi salvo!');
               conteudo = '📷 Imagem (erro ao salvar)';
             }
           } else {
-            console.error('❌ Buffer de imagem vazio!');
+            logger.error('❌ Buffer de imagem vazio!');
             conteudo = '📷 Imagem (erro no download)';
           }
         } catch (error) {
-          console.error('❌ Erro ao processar imagem:', error);
+          logger.error('❌ Erro ao processar imagem:', error);
           conteudo = '📷 Imagem (erro ao baixar)';
         }
       }
@@ -1116,7 +1117,7 @@ class WhatsAppService {
       // Processar mensagem de vídeo
       else if (message.message?.videoMessage) {
         const videoMessage = message.message.videoMessage;
-        console.log(`🎥 Vídeo recebido de ${numero}`);
+        logger.info(`🎥 Vídeo recebido de ${numero}`);
         
         try {
           const fs = require('fs');
@@ -1141,7 +1142,7 @@ class WhatsAppService {
             fs.writeFileSync(filePath, buffer);
             
             if (fs.existsSync(filePath)) {
-              console.log(`✅ Vídeo salvo com sucesso! Tamanho: ${buffer.length} bytes`);
+              logger.info(`✅ Vídeo salvo com sucesso! Tamanho: ${buffer.length} bytes`);
               tipo = 'video';
               mediaUrl = `/uploads/videos/${fileName}`;
               mediaName = fileName;
@@ -1149,15 +1150,15 @@ class WhatsAppService {
               const caption = videoMessage.caption;
               if (caption) conteudo += `: ${caption}`;
             } else {
-              console.error('❌ Arquivo de vídeo não foi salvo!');
+              logger.error('❌ Arquivo de vídeo não foi salvo!');
               conteudo = '🎥 Vídeo (erro ao salvar)';
             }
           } else {
-            console.error('❌ Buffer de vídeo vazio!');
+            logger.error('❌ Buffer de vídeo vazio!');
             conteudo = '🎥 Vídeo (erro no download)';
           }
         } catch (error) {
-          console.error('❌ Erro ao processar vídeo:', error);
+          logger.error('❌ Erro ao processar vídeo:', error);
           conteudo = '🎥 Vídeo (erro ao baixar)';
         }
       }
@@ -1165,7 +1166,7 @@ class WhatsAppService {
       // Processar documento
       else if (message.message?.documentMessage) {
         const documentMessage = message.message.documentMessage;
-        console.log(`📄 Documento recebido de ${numero}`);
+        logger.info(`📄 Documento recebido de ${numero}`);
         
         try {
           const fs = require('fs');
@@ -1188,28 +1189,28 @@ class WhatsAppService {
             fs.writeFileSync(filePath, buffer);
             
             if (fs.existsSync(filePath)) {
-              console.log(`✅ Documento salvo com sucesso! Tamanho: ${buffer.length} bytes`);
+              logger.info(`✅ Documento salvo com sucesso! Tamanho: ${buffer.length} bytes`);
               tipo = 'documento';
               mediaUrl = `/uploads/documents/${fileName}`;
               mediaName = originalName;
               conteudo = `📄 ${originalName}`;
             } else {
-              console.error('❌ Arquivo de documento não foi salvo!');
+              logger.error('❌ Arquivo de documento não foi salvo!');
               conteudo = `📄 ${originalName} (erro ao salvar)`;
             }
           } else {
-            console.error('❌ Buffer de documento vazio!');
+            logger.error('❌ Buffer de documento vazio!');
             conteudo = `📄 ${documentMessage.fileName || 'documento'} (erro no download)`;
           }
         } catch (error) {
-          console.error('❌ Erro ao processar documento:', error);
+          logger.error('❌ Erro ao processar documento:', error);
           conteudo = `📄 ${documentMessage.fileName || 'documento'} (erro ao baixar)`;
         }
       }
 
       if (!conteudo) return;
 
-      console.log(`📱 Mensagem recebida de ${numero}: ${conteudo}`);
+      logger.info(`📱 Mensagem recebida de ${numero}: ${conteudo}`);
 
       // Verificar se o lead já existe
       const [leadRows4] = await pool.query(
@@ -1222,7 +1223,7 @@ class WhatsAppService {
 
       if ((leadRows4 as any[]).length === 0) {
         // Criar novo lead
-        console.log('👤 Criando novo lead para:', numero);
+        logger.info('👤 Criando novo lead para:', numero);
         // ✅ Usar função para formatar nome de exibição
         const nomeFormatado = this.formatarNumeroExibicao(numero);
         
@@ -1244,11 +1245,11 @@ class WhatsAppService {
           leadId = (leadCriadoRows as any[])[0]?.id;
         }
         
-        console.log('✅ Novo lead criado com ID:', leadId);
+        logger.info('✅ Novo lead criado com ID:', leadId);
         isNovoLead = true;
       } else {
         leadId = (leadRows4 as any[])[0].id;
-        console.log('📋 Lead existente encontrado:', leadId);
+        logger.info('📋 Lead existente encontrado:', leadId);
 
         // Incrementar mensagens não lidas
         await pool.query(
@@ -1258,7 +1259,7 @@ class WhatsAppService {
       }
 
       // ✅ Salvar mensagem no banco COM O ID ÚNICO DO WHATSAPP
-      console.log('💾 [DEBUG] Salvando mensagem no banco:', {
+      logger.info('💾 [DEBUG] Salvando mensagem no banco:', {
         leadId,
         consultorId,
         conteudo: conteudo.substring(0, 50),
@@ -1271,7 +1272,7 @@ class WhatsAppService {
          VALUES (?, ?, ?, ?, 'lead', 'lida', ?, ?, ?, NOW())`,
         [leadId, consultorId, conteudo, tipo, mediaUrl, mediaName, whatsappMessageId]
       );
-      console.log('✅ [DEBUG] Mensagem salva com sucesso! WhatsApp ID:', whatsappMessageId);
+      logger.info('✅ [DEBUG] Mensagem salva com sucesso! WhatsApp ID:', whatsappMessageId);
 
       // Atualizar última mensagem do lead
       await pool.query(
@@ -1289,7 +1290,7 @@ class WhatsAppService {
 
       // Emitir evento de nova mensagem via Socket.IO
       if (this.io) {
-        console.log('📡 Emitindo evento nova_mensagem via Socket.IO');
+        logger.info('📡 Emitindo evento nova_mensagem via Socket.IO');
         
         // Emitir para o consultor
         this.io.to(`consultor_${consultorId}`).emit('nova_mensagem', {
@@ -1311,7 +1312,7 @@ class WhatsAppService {
           timestamp: new Date().toISOString(),
           isNovoLead
         });
-        console.log('✅ Evento nova_mensagem emitido com mediaUrl:', mediaUrl);
+        logger.info('✅ Evento nova_mensagem emitido com mediaUrl:', mediaUrl);
         
         // Emitir também para admins
         this.io.to('admins').emit('nova_mensagem', {
@@ -1333,11 +1334,11 @@ class WhatsAppService {
           timestamp: new Date().toISOString(),
           isNovoLead
         });
-        console.log('✅ Evento nova_mensagem emitido para admins também');
+        logger.info('✅ Evento nova_mensagem emitido para admins também');
 
         // Se for novo lead, emitir evento adicional
         if (isNovoLead) {
-          console.log('📡 Emitindo evento novo_lead via Socket.IO');
+          logger.info('📡 Emitindo evento novo_lead via Socket.IO');
           
           // Emitir para o consultor
           this.io.to(`consultor_${consultorId}`).emit('novo_lead', {
@@ -1352,7 +1353,7 @@ class WhatsAppService {
               dataAtualizacao: lead.data_atualizacao
             }
           });
-          console.log('✅ Evento novo_lead emitido para consultor');
+          logger.info('✅ Evento novo_lead emitido para consultor');
           
           // Emitir também para admins
           this.io.to('admins').emit('novo_lead', {
@@ -1367,11 +1368,11 @@ class WhatsAppService {
               dataAtualizacao: lead.data_atualizacao
             }
           });
-          console.log('✅ Evento novo_lead emitido para admins também');
+          logger.info('✅ Evento novo_lead emitido para admins também');
         }
       }
     } catch (error) {
-      console.error('❌ Erro ao processar mensagem recebida:', error);
+      logger.error('❌ Erro ao processar mensagem recebida:', error);
     }
   }
 
@@ -1402,23 +1403,23 @@ class WhatsAppService {
   getAnyActiveSocket(): any | null {
     for (const [consultorId, session] of this.sessions.entries()) {
       if (session.connected && session.sock) {
-        console.log(`✅ Usando socket ativo do consultor: ${consultorId}`);
+        logger.info(`✅ Usando socket ativo do consultor: ${consultorId}`);
         return session.sock;
       }
     }
-    console.log('⚠️ Nenhum socket ativo encontrado');
+    logger.info('⚠️ Nenhum socket ativo encontrado');
     return null;
   }
 
   // Método auxiliar para baixar mídia
   private async downloadMedia(message: WAMessage, consultorId: string): Promise<Buffer | null> {
     try {
-      console.log('📥 Iniciando download de mídia...');
+      logger.info('📥 Iniciando download de mídia...');
       
       // Obter o socket da sessão do consultor específico
       const session = this.sessions.get(consultorId);
       if (!session || !session.sock) {
-        console.error('❌ Socket não encontrado para o consultor:', consultorId);
+        logger.error('❌ Socket não encontrado para o consultor:', consultorId);
         return null;
       }
 
@@ -1427,7 +1428,7 @@ class WhatsAppService {
       // Usar downloadMediaMessage do Baileys diretamente
       const { downloadMediaMessage } = await import('baileys');
       
-      console.log('🔄 Baixando buffer da mensagem...');
+      logger.info('🔄 Baixando buffer da mensagem...');
       const buffer = await downloadMediaMessage(
         message,
         'buffer',
@@ -1439,15 +1440,15 @@ class WhatsAppService {
       );
 
       if (buffer) {
-        console.log(`✅ Mídia baixada com sucesso! Tamanho: ${buffer.length} bytes`);
+        logger.info(`✅ Mídia baixada com sucesso! Tamanho: ${buffer.length} bytes`);
         return buffer as Buffer;
       }
 
-      console.error('❌ Buffer vazio retornado');
+      logger.error('❌ Buffer vazio retornado');
       return null;
     } catch (error) {
-      console.error('❌ Erro ao baixar mídia:', error);
-      console.error('Stack completo:', (error as Error).stack);
+      logger.error('❌ Erro ao baixar mídia:', error);
+      logger.error('Stack completo:', (error as Error).stack);
       return null;
     }
   }

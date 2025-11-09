@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { logger } from './config/logger';
 
 // Listar todas as tarefas do consultor
 export const getTarefas = async (req: Request, res: Response) => {
@@ -20,7 +21,7 @@ export const getTarefas = async (req: Request, res: Response) => {
 
     res.json(tarefas);
   } catch (error) {
-    console.error('Erro ao buscar tarefas:', error);
+    logger.error('Erro ao buscar tarefas:', error);
     res.status(500).json({ error: 'Erro ao buscar tarefas' });
   }
 };
@@ -40,7 +41,7 @@ export const getTarefasByLead = async (req: Request, res: Response) => {
 
     res.json(tarefas);
   } catch (error) {
-    console.error('Erro ao buscar tarefas do lead:', error);
+    logger.error('Erro ao buscar tarefas do lead:', error);
     res.status(500).json({ error: 'Erro ao buscar tarefas do lead' });
   }
 };
@@ -51,7 +52,7 @@ export const createTarefa = async (req: Request, res: Response) => {
     const { leadId, titulo, descricao, dataVencimento } = req.body;
     const consultorId = (req as any).user.id;
 
-    console.log('📝 Dados recebidos para criar tarefa:', {
+    logger.info('📝 Dados recebidos para criar tarefa:', {
       leadId,
       titulo,
       descricao,
@@ -70,7 +71,7 @@ export const createTarefa = async (req: Request, res: Response) => {
     // NÃO converter com new Date() para evitar problemas de timezone
     const dataFormatada = dataVencimento;
     
-    console.log('🕐 Data recebida (sem conversão):', dataFormatada);
+    logger.info('🕐 Data recebida (sem conversão):', dataFormatada);
 
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO tarefas (lead_id, consultor_id, titulo, descricao, data_vencimento, status)
@@ -78,7 +79,7 @@ export const createTarefa = async (req: Request, res: Response) => {
       [leadId, consultorId, titulo, descricao || '', dataFormatada]
     );
 
-    console.log('✅ Tarefa criada com ID:', result.insertId);
+    logger.info('✅ Tarefa criada com ID:', result.insertId);
 
     const [tarefa] = await pool.query<RowDataPacket[]>(
       'SELECT * FROM tarefas WHERE id = ?',
@@ -87,8 +88,8 @@ export const createTarefa = async (req: Request, res: Response) => {
 
     res.status(201).json(tarefa[0]);
   } catch (error: any) {
-    console.error('❌ Erro ao criar tarefa:', error);
-    console.error('📋 Stack trace:', error.stack);
+    logger.error('❌ Erro ao criar tarefa:', error);
+    logger.error('📋 Stack trace:', error.stack);
     res.status(500).json({ 
       error: 'Erro ao criar tarefa',
       details: error.message 
@@ -116,7 +117,7 @@ export const completeTarefa = async (req: Request, res: Response) => {
 
     res.json(tarefa[0]);
   } catch (error) {
-    console.error('Erro ao concluir tarefa:', error);
+    logger.error('Erro ao concluir tarefa:', error);
     res.status(500).json({ error: 'Erro ao concluir tarefa' });
   }
 };
@@ -134,7 +135,7 @@ export const deleteTarefa = async (req: Request, res: Response) => {
 
     res.json({ message: 'Tarefa deletada com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar tarefa:', error);
+    logger.error('Erro ao deletar tarefa:', error);
     res.status(500).json({ error: 'Erro ao deletar tarefa' });
   }
 };

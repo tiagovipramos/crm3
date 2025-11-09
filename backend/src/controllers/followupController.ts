@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import pool from '../config/database';
+import { logger } from './config/logger';
 
 // ============================================
 // TIPOS
@@ -65,7 +66,7 @@ export const listarSequencias = async (req: Request, res: Response) => {
 
     res.json(sequencias);
   } catch (error) {
-    console.error('Erro ao listar sequências:', error);
+    logger.error('Erro ao listar sequências:', error);
     res.status(500).json({ error: 'Erro ao listar sequências' });
   }
 };
@@ -98,7 +99,7 @@ export const buscarSequencia = async (req: Request, res: Response) => {
       mensagens
     });
   } catch (error) {
-    console.error('Erro ao buscar sequência:', error);
+    logger.error('Erro ao buscar sequência:', error);
     res.status(500).json({ error: 'Erro ao buscar sequência' });
   }
 };
@@ -170,7 +171,7 @@ export const criarSequencia = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao criar sequência:', error);
+    logger.error('Erro ao criar sequência:', error);
     res.status(500).json({ error: 'Erro ao criar sequência' });
   }
 };
@@ -236,7 +237,7 @@ export const atualizarSequencia = async (req: Request, res: Response) => {
       connection.release();
     }
   } catch (error) {
-    console.error('Erro ao atualizar sequência:', error);
+    logger.error('Erro ao atualizar sequência:', error);
     res.status(500).json({ error: 'Erro ao atualizar sequência' });
   }
 };
@@ -252,7 +253,7 @@ export const deletarSequencia = async (req: Request, res: Response) => {
 
     res.json({ message: 'Sequência deletada com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar sequência:', error);
+    logger.error('Erro ao deletar sequência:', error);
     res.status(500).json({ error: 'Erro ao deletar sequência' });
   }
 };
@@ -309,7 +310,7 @@ export const adicionarLeadSequencia = async (req: Request, res: Response) => {
       data_proxima_mensagem: dataProxima
     });
   } catch (error) {
-    console.error('Erro ao adicionar lead à sequência:', error);
+    logger.error('Erro ao adicionar lead à sequência:', error);
     res.status(500).json({ error: 'Erro ao adicionar lead à sequência' });
   }
 };
@@ -331,7 +332,7 @@ export const pausarFollowUp = async (req: Request, res: Response) => {
 
     res.json({ message: 'Follow-up pausado com sucesso' });
   } catch (error) {
-    console.error('Erro ao pausar follow-up:', error);
+    logger.error('Erro ao pausar follow-up:', error);
     res.status(500).json({ error: 'Erro ao pausar follow-up' });
   }
 };
@@ -378,7 +379,7 @@ export const reativarFollowUp = async (req: Request, res: Response) => {
 
     res.json({ message: 'Follow-up reativado com sucesso' });
   } catch (error) {
-    console.error('Erro ao reativar follow-up:', error);
+    logger.error('Erro ao reativar follow-up:', error);
     res.status(500).json({ error: 'Erro ao reativar follow-up' });
   }
 };
@@ -399,7 +400,7 @@ export const cancelarFollowUp = async (req: Request, res: Response) => {
 
     res.json({ message: 'Follow-up cancelado com sucesso' });
   } catch (error) {
-    console.error('Erro ao cancelar follow-up:', error);
+    logger.error('Erro ao cancelar follow-up:', error);
     res.status(500).json({ error: 'Erro ao cancelar follow-up' });
   }
 };
@@ -422,7 +423,7 @@ export const listarFollowUpsLead = async (req: Request, res: Response) => {
 
     res.json(followups);
   } catch (error) {
-    console.error('Erro ao listar follow-ups do lead:', error);
+    logger.error('Erro ao listar follow-ups do lead:', error);
     res.status(500).json({ error: 'Erro ao listar follow-ups do lead' });
   }
 };
@@ -437,7 +438,7 @@ export const listarFollowUpsLead = async (req: Request, res: Response) => {
  */
 export const processarEnviosProgramados = async (req: Request, res: Response) => {
   try {
-    console.log('🔄 Processando envios programados...');
+    logger.info('🔄 Processando envios programados...');
 
     // Buscar follow-ups que precisam enviar mensagem
     const [followups] = await pool.query<RowDataPacket[]>(
@@ -450,14 +451,14 @@ export const processarEnviosProgramados = async (req: Request, res: Response) =>
        LIMIT 50`
     );
 
-    console.log(`📬 ${followups.length} mensagens para enviar`);
+    logger.info(`📬 ${followups.length} mensagens para enviar`);
 
     const resultados = [];
 
     for (const followup of followups) {
       try {
         // TODO: Integrar com whatsappService para enviar mensagem real
-        console.log(`📤 Enviando mensagem para lead ${followup.lead_id}`);
+        logger.info(`📤 Enviando mensagem para lead ${followup.lead_id}`);
 
         // Registrar no histórico
         await pool.query(
@@ -498,7 +499,7 @@ export const processarEnviosProgramados = async (req: Request, res: Response) =>
           resultados.push({ leadId: followup.lead_id, status: 'concluido' });
         }
       } catch (error) {
-        console.error(`❌ Erro ao processar follow-up ${followup.id}:`, error);
+        logger.error(`❌ Erro ao processar follow-up ${followup.id}:`, error);
         
         // Registrar erro no histórico
         await pool.query(
@@ -516,7 +517,7 @@ export const processarEnviosProgramados = async (req: Request, res: Response) =>
       resultados
     });
   } catch (error) {
-    console.error('Erro ao processar envios programados:', error);
+    logger.error('Erro ao processar envios programados:', error);
     res.status(500).json({ error: 'Erro ao processar envios programados' });
   }
 };
@@ -526,7 +527,7 @@ export const processarEnviosProgramados = async (req: Request, res: Response) =>
  */
 export const aplicarFollowUpAutomatico = async (leadId: number, novaFase: string) => {
   try {
-    console.log(`🔍 Verificando follow-ups automáticos para lead ${leadId} na fase ${novaFase}`);
+    logger.info(`🔍 Verificando follow-ups automáticos para lead ${leadId} na fase ${novaFase}`);
 
     // Pausar follow-ups ativos anteriores
     await pool.query(
@@ -547,7 +548,7 @@ export const aplicarFollowUpAutomatico = async (leadId: number, novaFase: string
 
     if (sequencias.length > 0) {
       const sequencia = sequencias[0];
-      console.log(`✅ Sequência encontrada: ${sequencia.nome}`);
+      logger.info(`✅ Sequência encontrada: ${sequencia.nome}`);
 
       // Buscar primeira mensagem
       const [mensagens] = await pool.query<RowDataPacket[]>(
@@ -568,11 +569,11 @@ export const aplicarFollowUpAutomatico = async (leadId: number, novaFase: string
           [leadId, sequencia.id, dataProxima, dataProxima]
         );
 
-        console.log(`✅ Follow-up automático aplicado para lead ${leadId}`);
+        logger.info(`✅ Follow-up automático aplicado para lead ${leadId}`);
       }
     }
   } catch (error) {
-    console.error('Erro ao aplicar follow-up automático:', error);
+    logger.error('Erro ao aplicar follow-up automático:', error);
   }
 };
 
@@ -591,7 +592,7 @@ export const obterEstatisticas = async (req: Request, res: Response) => {
 
     res.json(estatisticas);
   } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
+    logger.error('Erro ao obter estatísticas:', error);
     res.status(500).json({ error: 'Erro ao obter estatísticas' });
   }
 };
@@ -610,7 +611,7 @@ export const obterProximosEnvios = async (req: Request, res: Response) => {
 
     res.json(envios);
   } catch (error) {
-    console.error('Erro ao obter próximos envios:', error);
+    logger.error('Erro ao obter próximos envios:', error);
     res.status(500).json({ error: 'Erro ao obter próximos envios' });
   }
 };
@@ -635,7 +636,7 @@ export const obterHistoricoLead = async (req: Request, res: Response) => {
 
     res.json(historico);
   } catch (error) {
-    console.error('Erro ao obter histórico:', error);
+    logger.error('Erro ao obter histórico:', error);
     res.status(500).json({ error: 'Erro ao obter histórico' });
   }
 };

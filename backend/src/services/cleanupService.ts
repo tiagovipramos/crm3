@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from './config/logger';
 
 /**
  * Serviço de limpeza automática de arquivos antigos
@@ -14,7 +15,7 @@ class CleanupService {
    */
   setDiasRetencao(dias: number) {
     this.diasParaManterArquivos = dias;
-    console.log(`🗑️ Retenção de arquivos configurada para ${dias} dias`);
+    logger.info(`🗑️ Retenção de arquivos configurada para ${dias} dias`);
   }
 
   /**
@@ -25,7 +26,7 @@ class CleanupService {
     arquivosDeletados: number;
     espacoLiberado: number;
   }> {
-    console.log('🧹 Iniciando limpeza de arquivos antigos...');
+    logger.info('🧹 Iniciando limpeza de arquivos antigos...');
     
     let totalArquivos = 0;
     let arquivosDeletados = 0;
@@ -53,15 +54,15 @@ class CleanupService {
           fs.unlinkSync(arquivoPath);
           arquivosDeletados++;
           espacoLiberado += tamanho;
-          console.log(`🗑️ Deletado: ${pasta}/${arquivo} (${this.formatarTamanho(tamanho)})`);
+          logger.info(`🗑️ Deletado: ${pasta}/${arquivo} (${this.formatarTamanho(tamanho)})`);
         }
       }
     }
 
-    console.log('✅ Limpeza concluída:');
-    console.log(`   📁 Total de arquivos: ${totalArquivos}`);
-    console.log(`   🗑️ Arquivos deletados: ${arquivosDeletados}`);
-    console.log(`   💾 Espaço liberado: ${this.formatarTamanho(espacoLiberado)}`);
+    logger.info('✅ Limpeza concluída:');
+    logger.info(`   📁 Total de arquivos: ${totalArquivos}`);
+    logger.info(`   🗑️ Arquivos deletados: ${arquivosDeletados}`);
+    logger.info(`   💾 Espaço liberado: ${this.formatarTamanho(espacoLiberado)}`);
 
     return { totalArquivos, arquivosDeletados, espacoLiberado };
   }
@@ -121,18 +122,18 @@ class CleanupService {
     // Primeira limpeza após 1 hora do servidor iniciar
     setTimeout(() => {
       this.limparArquivosAntigos().catch(err => {
-        console.error('❌ Erro na limpeza automática:', err);
+        logger.error('❌ Erro na limpeza automática:', err);
       });
     }, 60 * 60 * 1000); // 1 hora
 
     // Limpezas subsequentes a cada 24 horas
     setInterval(() => {
       this.limparArquivosAntigos().catch(err => {
-        console.error('❌ Erro na limpeza automática:', err);
+        logger.error('❌ Erro na limpeza automática:', err);
       });
     }, INTERVALO_24H);
 
-    console.log(`🤖 Limpeza automática ativada (a cada 24h, mantém ${this.diasParaManterArquivos} dias)`);
+    logger.info(`🤖 Limpeza automática ativada (a cada 24h, mantém ${this.diasParaManterArquivos} dias)`);
   }
 
   /**

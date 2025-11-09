@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database';
 import { whatsappService } from '../services/whatsappService';
+import { logger } from './config/logger';
 
 export const login = async (req: Request, res: Response) => {
   try {
@@ -60,7 +61,7 @@ export const login = async (req: Request, res: Response) => {
       statusConexao = 'connecting';
     } else {
       // Se não está conectado, tentar reconectar sessão existente
-      console.log('🔍 Verificando se existe sessão salva para reconectar...');
+      logger.info('🔍 Verificando se existe sessão salva para reconectar...');
       const reconectado = await whatsappService.tryReconnectExistingSessions(consultor.id);
       
       if (reconectado) {
@@ -105,7 +106,7 @@ export const login = async (req: Request, res: Response) => {
       consultor: consultorResponse
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    logger.error('Erro no login:', error);
     res.status(500).json({ error: 'Erro ao fazer login' });
   }
 };
@@ -141,7 +142,7 @@ export const getMe = async (req: Request, res: Response) => {
 
     res.json({ consultor: consultorResponse });
   } catch (error) {
-    console.error('Erro ao buscar consultor:', error);
+    logger.error('Erro ao buscar consultor:', error);
     res.status(500).json({ error: 'Erro ao buscar consultor' });
   }
 };

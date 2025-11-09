@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { logger } from './config/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'protecar-secret-key-indicador-2024';
 
@@ -38,7 +39,7 @@ export const authIndicador = (req: IndicadorAuthRequest, res: Response, next: Ne
 
     next();
   } catch (error) {
-    console.error('Erro na autenticação do indicador:', error);
+    logger.error('Erro na autenticação do indicador:', error);
     return res.status(401).json({ 
       error: 'Token inválido',
       message: 'Sessão expirada ou inválida'

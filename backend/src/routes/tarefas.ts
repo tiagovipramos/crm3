@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import {
+import { logger } from './config/logger';
   getTarefas,
   getTarefasByLead,
   createTarefa,
@@ -35,7 +36,7 @@ router.put('/:id', async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Erro ao atualizar tarefa:', error);
+    logger.error('Erro ao atualizar tarefa:', error);
     res.status(500).json({ error: 'Erro ao atualizar tarefa' });
   }
 });

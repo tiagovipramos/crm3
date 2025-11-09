@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
+import { logger } from './config/logger';
 
 export const getTempoMedioResposta = async (req: Request, res: Response) => {
   try {
@@ -94,7 +95,7 @@ export const getTempoMedioResposta = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Erro ao calcular tempo médio de resposta:', error);
+    logger.error('Erro ao calcular tempo médio de resposta:', error);
     res.status(500).json({ error: 'Erro ao calcular tempo médio de resposta' });
   }
 };

@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { whatsappValidationService } from '../services/whatsappValidationService';
 import { whatsappService } from '../services/whatsappService';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { logger } from './config/logger';
 
 // ============================================
 // AUTENTICAÇÃO
@@ -95,7 +96,7 @@ export const register = async (req: IndicadorAuthRequest, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao registrar indicador:', error);
+    logger.error('Erro ao registrar indicador:', error);
     res.status(500).json({ 
       error: 'Erro ao registrar',
       message: 'Erro interno do servidor'
@@ -180,7 +181,7 @@ export const login = async (req: IndicadorAuthRequest, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao fazer login:', error);
+    logger.error('Erro ao fazer login:', error);
     res.status(500).json({ 
       error: 'Erro ao fazer login',
       message: 'Erro interno do servidor'
@@ -225,7 +226,7 @@ export const getMe = async (req: IndicadorAuthRequest, res: Response) => {
       ultimoAcesso: indicador.ultimo_acesso
     });
   } catch (error) {
-    console.error('Erro ao buscar indicador:', error);
+    logger.error('Erro ao buscar indicador:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar dados',
       message: 'Erro interno do servidor'
@@ -361,7 +362,7 @@ export const getDashboard = async (req: IndicadorAuthRequest, res: Response) => 
       }))
     });
   } catch (error) {
-    console.error('Erro ao buscar dashboard:', error);
+    logger.error('Erro ao buscar dashboard:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar dashboard',
       message: 'Erro interno do servidor'
@@ -389,7 +390,7 @@ export const validarWhatsApp = async (req: IndicadorAuthRequest, res: Response) 
 
     res.json(resultado);
   } catch (error) {
-    console.error('Erro ao validar WhatsApp:', error);
+    logger.error('Erro ao validar WhatsApp:', error);
     res.status(500).json({ 
       error: 'Erro ao validar WhatsApp',
       message: 'Erro interno do servidor'
@@ -424,16 +425,16 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
     }
 
     // ✅ VERIFICAR SE HÁ CONSULTORES COM WHATSAPP CONECTADO ANTES DE CRIAR A INDICAÇÃO
-    console.log('🔍 Verificando se há consultores com WhatsApp conectado...');
+    logger.info('🔍 Verificando se há consultores com WhatsApp conectado...');
     const [consultoresOnlineRows] = await pool.query<RowDataPacket[]>(
       `SELECT COUNT(*) as total FROM consultores WHERE status_conexao = 'online'`
     );
 
     const totalConsultoresOnline = consultoresOnlineRows[0]?.total || 0;
-    console.log('📊 Total de consultores com WhatsApp conectado:', totalConsultoresOnline);
+    logger.info('📊 Total de consultores com WhatsApp conectado:', totalConsultoresOnline);
 
     if (totalConsultoresOnline === 0) {
-      console.warn('⚠️ Nenhum consultor com WhatsApp conectado. Bloqueando criação de indicação.');
+      logger.warn('⚠️ Nenhum consultor com WhatsApp conectado. Bloqueando criação de indicação.');
       return res.status(400).json({ 
         error: 'Nenhum vendedor disponível',
         message: 'Sem WPP, favor contactar o suporte.'
@@ -499,7 +500,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
     );
 
     // 🎯 ALGORITMO ROUND ROBIN: Buscar apenas consultores com WhatsApp conectado
-    console.log('🔍 Buscando consultores com WhatsApp conectado...');
+    logger.info('🔍 Buscando consultores com WhatsApp conectado...');
     const [consultoresRows] = await pool.query<RowDataPacket[]>(
       `SELECT id, nome, status_conexao, 
               (SELECT COUNT(*) FROM leads WHERE consultor_id = consultores.id) as total_leads
@@ -513,7 +514,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
 
     // Se não houver consultores online, manter indicação pendente
     if (consultoresRows.length === 0) {
-      console.warn('⚠️ Nenhum consultor com WhatsApp conectado. Indicação criada mas lead não será gerado.');
+      logger.warn('⚠️ Nenhum consultor com WhatsApp conectado. Indicação criada mas lead não será gerado.');
       return res.json({
         success: true,
         message: 'Indicação criada com sucesso! Aguardando disponibilidade de consultores com WhatsApp conectado para envio ao CRM.',
@@ -533,22 +534,22 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
     const consultorNome = consultorSelecionado.nome;
     const statusConexao = consultorSelecionado.status_conexao;
     
-    console.log(`✅ Consultor selecionado: ${consultorNome} (${consultorId})`);
-    console.log(`📊 Total de leads atuais: ${consultorSelecionado.total_leads}`);
-    console.log(`📱 Status WhatsApp: ${statusConexao}`);
+    logger.info(`✅ Consultor selecionado: ${consultorNome} (${consultorId})`);
+    logger.info(`📊 Total de leads atuais: ${consultorSelecionado.total_leads}`);
+    logger.info(`📱 Status WhatsApp: ${statusConexao}`);
 
     // Se houver consultores online, criar o lead automaticamente
     if (consultorId) {
 
       // 🔍 DEBUG: Verificar valores antes de criar lead
-      console.log('🔍 [DEBUG] Criando lead com os seguintes dados:');
-      console.log('  - Nome:', nomeIndicado);
-      console.log('  - Telefone:', validacao.telefone);
-      console.log('  - Consultor ID:', consultorId);
-      console.log('  - Indicador ID:', indicadorId);
-      console.log('  - Indicador ID tipo:', typeof indicadorId);
-      console.log('  - Indicador ID é undefined?', indicadorId === undefined);
-      console.log('  - Indicador ID é null?', indicadorId === null);
+      logger.info('🔍 [DEBUG] Criando lead com os seguintes dados:');
+      logger.info('  - Nome:', nomeIndicado);
+      logger.info('  - Telefone:', validacao.telefone);
+      logger.info('  - Consultor ID:', consultorId);
+      logger.info('  - Indicador ID:', indicadorId);
+      logger.info('  - Indicador ID tipo:', typeof indicadorId);
+      logger.info('  - Indicador ID é undefined?', indicadorId === undefined);
+      logger.info('  - Indicador ID é null?', indicadorId === null);
 
       // Criar lead no CRM automaticamente no kanban "Indicação"
       const [leadResult] = await pool.query<ResultSetHeader>(
@@ -561,7 +562,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
 
       // 🔍 IMPORTANTE: Como a tabela usa UUID, insertId sempre retorna 0
       // Precisamos fazer SELECT para buscar o lead recém-criado
-      console.log('📊 INSERT executado com sucesso. affectedRows:', leadResult.affectedRows);
+      logger.info('📊 INSERT executado com sucesso. affectedRows:', leadResult.affectedRows);
       
       // Buscar o lead recém-criado pelo telefone e consultor
       const [leadRows] = await pool.query<RowDataPacket[]>(
@@ -572,10 +573,10 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       );
 
       const leadId = leadRows[0]?.id;
-      console.log('✅ Lead ID recuperado do banco:', leadId);
+      logger.info('✅ Lead ID recuperado do banco:', leadId);
 
       if (leadId) {
-        console.log('✅ Entrando no bloco de Socket.IO e WhatsApp');
+        logger.info('✅ Entrando no bloco de Socket.IO e WhatsApp');
         await pool.query(
           'UPDATE indicacoes SET lead_id = ?, status = ? WHERE id = ?',
           [leadId, 'enviado_crm', indicacao.id]
@@ -584,7 +585,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
         // 🔥 Emitir evento Socket.IO para o consultor sobre o novo lead
         const io = (global as any).io;
         if (io) {
-          console.log(`📡 Emitindo evento 'novo_lead' para consultor ${consultorId}`);
+          logger.info(`📡 Emitindo evento 'novo_lead' para consultor ${consultorId}`);
           io.to(`consultor_${consultorId}`).emit('novo_lead', {
             leadId: leadId,
             nome: nomeIndicado,
@@ -595,9 +596,9 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
             indicadorId: indicadorId,
             timestamp: new Date().toISOString()
           });
-          console.log('✅ Evento Socket.IO emitido com sucesso');
+          logger.info('✅ Evento Socket.IO emitido com sucesso');
         } else {
-          console.warn('⚠️ Socket.IO não disponível para emitir evento');
+          logger.warn('⚠️ Socket.IO não disponível para emitir evento');
         }
 
         // 📱 Enviar mensagem automática de boas-vindas via WhatsApp
@@ -630,16 +631,16 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
                 .replace(/{nome_vendedor}/g, consultorNome)
                 .replace(/{telefone_cliente}/g, validacao.telefone);
               
-              console.log('✅ Usando mensagem configurada do banco de dados');
+              logger.info('✅ Usando mensagem configurada do banco de dados');
             } else {
               // ❌ Fallback para mensagem padrão se não houver mensagem configurada
               mensagemBoasVindas = `Olá ${nomeIndicado}, tudo bem? Meu nome é ${consultorNome} e recebi seu contato através do ${indicadorNome}. Seria para fazer a cotação do seu seguro.`;
-              console.log('⚠️ Nenhuma mensagem de boas-vindas configurada. Usando mensagem padrão.');
+              logger.info('⚠️ Nenhuma mensagem de boas-vindas configurada. Usando mensagem padrão.');
             }
 
-            console.log(`📤 Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
-            console.log(`📝 Mensagem: ${mensagemBoasVindas}`);
-            console.log(`🆔 Lead ID para associar a mensagem: ${leadId}`);
+            logger.info(`📤 Enviando mensagem automática de boas-vindas para ${validacao.telefone}...`);
+            logger.info(`📝 Mensagem: ${mensagemBoasVindas}`);
+            logger.info(`🆔 Lead ID para associar a mensagem: ${leadId}`);
             
             // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
             await whatsappService.enviarMensagem(
@@ -649,11 +650,11 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
               String(leadId) // ✅ Converter para string
             );
 
-            console.log('✅ Mensagem de boas-vindas enviada com sucesso!');
+            logger.info('✅ Mensagem de boas-vindas enviada com sucesso!');
             mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM e recebeu uma mensagem de boas-vindas.';
           } catch (whatsappError) {
-            console.error('⚠️ Erro ao enviar mensagem de boas-vindas:', whatsappError);
-            console.error('📋 Detalhes do erro:', {
+            logger.error('⚠️ Erro ao enviar mensagem de boas-vindas:', whatsappError);
+            logger.error('📋 Detalhes do erro:', {
               message: (whatsappError as Error).message,
               stack: (whatsappError as Error).stack
             });
@@ -661,7 +662,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
             mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM.';
           }
         } else {
-          console.log('⚠️ WhatsApp do consultor não está conectado. Mensagem de boas-vindas não será enviada.');
+          logger.info('⚠️ WhatsApp do consultor não está conectado. Mensagem de boas-vindas não será enviada.');
           mensagem = 'Indicação criada com sucesso! O lead foi enviado para o CRM.';
         }
       }
@@ -672,7 +673,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       }
     } else {
       // Se não houver consultores, manter indicação como pendente
-      console.warn('Aviso: Nenhum consultor disponível. Indicação criada mas lead não foi gerado.');
+      logger.warn('Aviso: Nenhum consultor disponível. Indicação criada mas lead não foi gerado.');
       mensagem = 'Indicação criada com sucesso! Aguardando disponibilidade de consultores para envio ao CRM.';
     }
 
@@ -688,7 +689,7 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       }
     });
   } catch (error) {
-    console.error('Erro ao criar indicação:', error);
+    logger.error('Erro ao criar indicação:', error);
     res.status(500).json({ 
       error: 'Erro ao criar indicação',
       message: 'Erro interno do servidor'
@@ -742,7 +743,7 @@ export const getIndicacoes = async (req: IndicadorAuthRequest, res: Response) =>
 
     res.json(indicacoes);
   } catch (error) {
-    console.error('Erro ao buscar indicações:', error);
+    logger.error('Erro ao buscar indicações:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar indicações',
       message: 'Erro interno do servidor'
@@ -797,7 +798,7 @@ export const getIndicacao = async (req: IndicadorAuthRequest, res: Response) => 
       consultorEmail: ind.consultor_email
     });
   } catch (error) {
-    console.error('Erro ao buscar indicação:', error);
+    logger.error('Erro ao buscar indicação:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar indicação',
       message: 'Erro interno do servidor'
@@ -838,7 +839,7 @@ export const deletarTodasIndicacoes = async (req: IndicadorAuthRequest, res: Res
       message: 'Todas as indicações foram deletadas com sucesso!'
     });
   } catch (error) {
-    console.error('Erro ao deletar indicações:', error);
+    logger.error('Erro ao deletar indicações:', error);
     res.status(500).json({ 
       error: 'Erro ao deletar indicações',
       message: 'Erro interno do servidor'
@@ -872,7 +873,7 @@ export const getTransacoes = async (req: IndicadorAuthRequest, res: Response) =>
 
     res.json(transacoes);
   } catch (error) {
-    console.error('Erro ao buscar transações:', error);
+    logger.error('Erro ao buscar transações:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar transações',
       message: 'Erro interno do servidor'
@@ -934,7 +935,7 @@ export const solicitarSaque = async (req: IndicadorAuthRequest, res: Response) =
       message: 'Saque solicitado com sucesso! Aguarde a aprovação.'
     });
   } catch (error) {
-    console.error('Erro ao solicitar saque:', error);
+    logger.error('Erro ao solicitar saque:', error);
     res.status(500).json({ 
       error: 'Erro ao solicitar saque',
       message: 'Erro interno do servidor'
@@ -967,7 +968,7 @@ export const getSaques = async (req: IndicadorAuthRequest, res: Response) => {
 
     res.json(saques);
   } catch (error) {
-    console.error('Erro ao buscar saques:', error);
+    logger.error('Erro ao buscar saques:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar saques',
       message: 'Erro interno do servidor'
@@ -998,7 +999,7 @@ export const atualizarAvatar = async (req: IndicadorAuthRequest, res: Response) 
       avatar
     });
   } catch (error) {
-    console.error('Erro ao atualizar avatar:', error);
+    logger.error('Erro ao atualizar avatar:', error);
     res.status(500).json({ 
       error: 'Erro ao atualizar avatar',
       message: 'Erro interno do servidor'
@@ -1064,7 +1065,7 @@ export const getLootBoxStatus = async (req: IndicadorAuthRequest, res: Response)
       podeAbrir: (indicador.leads_para_proxima_caixa || 0) >= indicacoesNecessarias
     });
   } catch (error) {
-    console.error('Erro ao buscar status da loot box:', error);
+    logger.error('Erro ao buscar status da loot box:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar status',
       message: 'Erro interno do servidor'
@@ -1148,7 +1149,7 @@ export const abrirLootBox = async (req: IndicadorAuthRequest, res: Response) => 
       leadsRestantes: leadsParaProximaCaixa - indicacoesNecessarias
     });
   } catch (error) {
-    console.error('Erro ao abrir loot box:', error);
+    logger.error('Erro ao abrir loot box:', error);
     res.status(500).json({ 
       error: 'Erro ao abrir caixa',
       message: 'Erro interno do servidor'
@@ -1163,7 +1164,7 @@ export const compartilharPremio = async (req: IndicadorAuthRequest, res: Respons
       message: 'Compartilhamento registrado!'
     });
   } catch (error) {
-    console.error('Erro ao registrar compartilhamento:', error);
+    logger.error('Erro ao registrar compartilhamento:', error);
     res.status(500).json({ 
       error: 'Erro ao registrar compartilhamento',
       message: 'Erro interno do servidor'

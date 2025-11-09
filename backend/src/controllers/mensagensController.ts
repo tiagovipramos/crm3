@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import { logger } from './config/logger';
 
 // Configurar caminho do ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -12,24 +13,24 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // Função para converter áudio de webm para ogg
 const convertWebmToOgg = (inputPath: string, outputPath: string): Promise<void> => {
   return new Promise((resolve, reject) => {
-    console.log('🔄 Iniciando conversão de áudio:', { inputPath, outputPath });
+    logger.info('🔄 Iniciando conversão de áudio:', { inputPath, outputPath });
     
     ffmpeg(inputPath)
       .toFormat('ogg')
       .audioCodec('libopus') // Codec Opus para OGG
       .audioBitrate('128k')
       .on('start', (commandLine) => {
-        console.log('▶️ Comando FFmpeg:', commandLine);
+        logger.info('▶️ Comando FFmpeg:', commandLine);
       })
       .on('progress', (progress) => {
-        console.log('⏳ Progresso:', progress.percent ? `${progress.percent.toFixed(1)}%` : 'processando...');
+        logger.info('⏳ Progresso:', progress.percent ? `${progress.percent.toFixed(1)}%` : 'processando...');
       })
       .on('end', () => {
-        console.log('✅ Conversão concluída com sucesso!');
+        logger.info('✅ Conversão concluída com sucesso!');
         resolve();
       })
       .on('error', (err) => {
-        console.error('❌ Erro na conversão:', err.message);
+        logger.error('❌ Erro na conversão:', err.message);
         reject(err);
       })
       .save(outputPath);
@@ -41,7 +42,7 @@ export const getMensagens = async (req: Request, res: Response) => {
     const { leadId } = req.params;
     const consultorId = req.user?.id;
 
-    console.log('📥 [GET MENSAGENS] Lead ID:', leadId, 'Consultor ID:', consultorId);
+    logger.info('📥 [GET MENSAGENS] Lead ID:', leadId, 'Consultor ID:', consultorId);
 
     // Verificar se o lead existe (sem verificar consultor por enquanto)
     const [leadCheckRows] = await pool.query(
@@ -50,13 +51,13 @@ export const getMensagens = async (req: Request, res: Response) => {
     );
 
     const leadCheckArray = leadCheckRows as any[];
-    console.log('🔍 [GET MENSAGENS] Lead encontrado?', leadCheckArray.length > 0);
+    logger.info('🔍 [GET MENSAGENS] Lead encontrado?', leadCheckArray.length > 0);
     if (leadCheckArray.length > 0) {
-      console.log('👤 [GET MENSAGENS] Consultor do lead:', leadCheckArray[0].consultor_id);
+      logger.info('👤 [GET MENSAGENS] Consultor do lead:', leadCheckArray[0].consultor_id);
     }
 
     if (leadCheckArray.length === 0) {
-      console.error('❌ [GET MENSAGENS] Lead não encontrado no banco!');
+      logger.error('❌ [GET MENSAGENS] Lead não encontrado no banco!');
       return res.status(404).json({ error: 'Lead não encontrado' });
     }
 
@@ -69,7 +70,7 @@ export const getMensagens = async (req: Request, res: Response) => {
     );
 
     const mensagensArray = mensagensRows as any[];
-    console.log('📨 [GET MENSAGENS] Total de mensagens encontradas:', mensagensArray.length);
+    logger.info('📨 [GET MENSAGENS] Total de mensagens encontradas:', mensagensArray.length);
 
     // Converter para camelCase
     const mensagens = mensagensArray.map((msg: any) => ({
@@ -87,7 +88,7 @@ export const getMensagens = async (req: Request, res: Response) => {
 
     res.json(mensagens);
   } catch (error) {
-    console.error('❌ [GET MENSAGENS] Erro ao buscar mensagens:', error);
+    logger.error('❌ [GET MENSAGENS] Erro ao buscar mensagens:', error);
     res.status(500).json({ error: 'Erro ao buscar mensagens' });
   }
 };
@@ -97,7 +98,7 @@ export const enviarMensagem = async (req: Request, res: Response) => {
     const { leadId, conteudo, tipo = 'texto' } = req.body;
     const consultorId = req.user?.id;
 
-    console.log('📨 Recebendo pedido para enviar mensagem:', { leadId, consultorId, conteudoLength: conteudo?.length });
+    logger.info('📨 Recebendo pedido para enviar mensagem:', { leadId, consultorId, conteudoLength: conteudo?.length });
 
     if (!leadId) {
       return res.status(400).json({ error: 'Lead ID é obrigatório' });
@@ -114,7 +115,7 @@ export const enviarMensagem = async (req: Request, res: Response) => {
     );
 
     const leadArray = leadRows as any[];
-    console.log('🔍 Resultado busca lead:', leadArray.length);
+    logger.info('🔍 Resultado busca lead:', leadArray.length);
 
     if (leadArray.length === 0) {
       return res.status(404).json({ error: 'Lead não encontrado' });
@@ -125,14 +126,14 @@ export const enviarMensagem = async (req: Request, res: Response) => {
     // Enviar via WhatsApp (já salva no banco dentro do whatsappService)
     try {
       await whatsappService.enviarMensagem(consultorId!, telefone, conteudo);
-      console.log('📤 Mensagem enviada via WhatsApp e salva no banco');
+      logger.info('📤 Mensagem enviada via WhatsApp e salva no banco');
     } catch (whatsappError: any) {
-      console.error('⚠️ Erro ao enviar via WhatsApp:', whatsappError.message);
+      logger.error('⚠️ Erro ao enviar via WhatsApp:', whatsappError.message);
       return res.status(500).json({ error: 'Erro ao enviar mensagem: ' + whatsappError.message });
     }
 
     // Buscar a mensagem recém-salva pelo whatsappService
-    console.log('🔍 Buscando mensagem salva no banco...');
+    logger.info('🔍 Buscando mensagem salva no banco...');
     const [mensagemRows] = await pool.query(
       `SELECT * FROM mensagens 
        WHERE lead_id = ? AND consultor_id = ? AND remetente = 'consultor'
@@ -146,9 +147,9 @@ export const enviarMensagem = async (req: Request, res: Response) => {
     
     if (mensagemArray.length > 0) {
       mensagemSalva = mensagemArray[0];
-      console.log('✅ Mensagem encontrada no banco:', mensagemSalva.id);
+      logger.info('✅ Mensagem encontrada no banco:', mensagemSalva.id);
     } else {
-      console.error('❌ Mensagem não encontrada no banco após envio');
+      logger.error('❌ Mensagem não encontrada no banco após envio');
       // Criar fallback
       mensagemSalva = {
         id: Date.now(),
@@ -168,7 +169,7 @@ export const enviarMensagem = async (req: Request, res: Response) => {
     try {
       const io = req.app.get('io');
       if (io) {
-        console.log('📡 Emitindo nova_mensagem via Socket.IO para consultor:', consultorId);
+        logger.info('📡 Emitindo nova_mensagem via Socket.IO para consultor:', consultorId);
         io.to(`consultor_${consultorId}`).emit('nova_mensagem', {
           id: mensagemSalva.id,
           leadId: mensagemSalva.lead_id,
@@ -181,17 +182,17 @@ export const enviarMensagem = async (req: Request, res: Response) => {
           mediaName: mensagemSalva.media_name,
           timestamp: mensagemSalva.timestamp
         });
-        console.log('✅ Evento emitido com sucesso');
+        logger.info('✅ Evento emitido com sucesso');
       } else {
-        console.warn('⚠️ Socket.IO não disponível no req.app');
+        logger.warn('⚠️ Socket.IO não disponível no req.app');
       }
     } catch (socketError) {
-      console.error('❌ Erro ao emitir via Socket.IO:', socketError);
+      logger.error('❌ Erro ao emitir via Socket.IO:', socketError);
     }
 
     res.status(201).json(mensagemSalva);
   } catch (error) {
-    console.error('Erro ao enviar mensagem:', error);
+    logger.error('Erro ao enviar mensagem:', error);
     res.status(500).json({ error: 'Erro ao enviar mensagem' });
   }
 };
@@ -227,7 +228,7 @@ export const marcarComoLida = async (req: Request, res: Response) => {
 
     res.json({ message: 'Mensagens marcadas como lidas' });
   } catch (error) {
-    console.error('Erro ao marcar mensagens como lidas:', error);
+    logger.error('Erro ao marcar mensagens como lidas:', error);
     res.status(500).json({ error: 'Erro ao marcar mensagens como lidas' });
   }
 };
@@ -237,16 +238,16 @@ export const enviarAudio = async (req: Request, res: Response) => {
     const { leadId, duracao } = req.body;
     const consultorId = req.user?.id;
     
-    console.log('🎤 Recebendo pedido para enviar áudio:', { leadId, consultorId, duracao });
-    console.log('📁 Arquivo recebido:', req.file);
+    logger.info('🎤 Recebendo pedido para enviar áudio:', { leadId, consultorId, duracao });
+    logger.info('📁 Arquivo recebido:', req.file);
 
     if (!leadId) {
-      console.error('❌ Lead ID não fornecido');
+      logger.error('❌ Lead ID não fornecido');
       return res.status(400).json({ error: 'Lead ID é obrigatório' });
     }
 
     if (!req.file) {
-      console.error('❌ Arquivo de áudio não fornecido');
+      logger.error('❌ Arquivo de áudio não fornecido');
       return res.status(400).json({ error: 'Arquivo de áudio é obrigatório' });
     }
 
@@ -268,7 +269,7 @@ export const enviarAudio = async (req: Request, res: Response) => {
     const audioDir = path.join(process.cwd(), 'uploads', 'audios');
     if (!fs.existsSync(audioDir)) {
       fs.mkdirSync(audioDir, { recursive: true });
-      console.log('📁 Diretório de áudios criado:', audioDir);
+      logger.info('📁 Diretório de áudios criado:', audioDir);
     }
     
     // Caminhos para arquivo temporário e final
@@ -279,18 +280,18 @@ export const enviarAudio = async (req: Request, res: Response) => {
     
     // Mover arquivo temporário para o diretório de áudios
     fs.renameSync(req.file.path, audioPathWebm);
-    console.log('📁 Áudio .webm temporário salvo em:', audioPathWebm);
+    logger.info('📁 Áudio .webm temporário salvo em:', audioPathWebm);
     
     // Converter de .webm para .ogg
     try {
       await convertWebmToOgg(audioPathWebm, audioPathOgg);
-      console.log('✅ Áudio convertido para .ogg:', audioPathOgg);
+      logger.info('✅ Áudio convertido para .ogg:', audioPathOgg);
       
       // Deletar arquivo .webm temporário após conversão bem-sucedida
       fs.unlinkSync(audioPathWebm);
-      console.log('🗑️ Arquivo .webm temporário removido');
+      logger.info('🗑️ Arquivo .webm temporário removido');
     } catch (conversionError) {
-      console.error('❌ Erro ao converter áudio:', conversionError);
+      logger.error('❌ Erro ao converter áudio:', conversionError);
       // Limpar arquivo temporário em caso de erro
       if (fs.existsSync(audioPathWebm)) {
         fs.unlinkSync(audioPathWebm);
@@ -301,22 +302,22 @@ export const enviarAudio = async (req: Request, res: Response) => {
     // Usar o arquivo .ogg convertido
     const audioPath = audioPathOgg;
     const audioName = audioNameOgg;
-    console.log('📁 Usando áudio final .ogg:', audioPath);
+    logger.info('📁 Usando áudio final .ogg:', audioPath);
 
-    console.log('📤 Preparando para enviar áudio via WhatsApp...', { consultorId, telefone, audioPath });
+    logger.info('📤 Preparando para enviar áudio via WhatsApp...', { consultorId, telefone, audioPath });
     
     // Enviar áudio via WhatsApp (já salva no banco dentro do whatsappService)
     try {
       await whatsappService.enviarArquivo(consultorId!, telefone, audioPath, 'audio');
-      console.log('✅ Áudio enviado via WhatsApp e salvo no banco');
+      logger.info('✅ Áudio enviado via WhatsApp e salvo no banco');
     } catch (whatsappError: any) {
-      console.error('⚠️ Erro ao enviar áudio via WhatsApp:', whatsappError);
-      console.error('Stack:', whatsappError.stack);
+      logger.error('⚠️ Erro ao enviar áudio via WhatsApp:', whatsappError);
+      logger.error('Stack:', whatsappError.stack);
       return res.status(500).json({ error: 'Erro ao enviar áudio via WhatsApp: ' + whatsappError.message });
     }
 
     // Buscar a mensagem de áudio recém-salva pelo whatsappService
-    console.log('🔍 Buscando mensagem de áudio salva no banco...');
+    logger.info('🔍 Buscando mensagem de áudio salva no banco...');
     const [audioMensagemRows] = await pool.query(
       `SELECT * FROM mensagens 
        WHERE lead_id = ? AND consultor_id = ? AND tipo = 'audio' AND remetente = 'consultor'
@@ -328,13 +329,13 @@ export const enviarAudio = async (req: Request, res: Response) => {
     const audioMensagemArray = audioMensagemRows as any[];
     if (audioMensagemArray.length > 0) {
       const mensagemSalva = audioMensagemArray[0];
-      console.log('✅ Mensagem de áudio encontrada no banco:', mensagemSalva.id);
+      logger.info('✅ Mensagem de áudio encontrada no banco:', mensagemSalva.id);
       
       // ✅ EMITIR via Socket.IO para todos os clientes do consultor
       try {
         const io = req.app.get('io');
         if (io) {
-          console.log('📡 Emitindo nova_mensagem (áudio) via Socket.IO para consultor:', consultorId);
+          logger.info('📡 Emitindo nova_mensagem (áudio) via Socket.IO para consultor:', consultorId);
           io.to(`consultor_${consultorId}`).emit('nova_mensagem', {
             id: mensagemSalva.id,
             leadId: mensagemSalva.lead_id,
@@ -347,17 +348,17 @@ export const enviarAudio = async (req: Request, res: Response) => {
             mediaName: mensagemSalva.media_name,
             timestamp: mensagemSalva.timestamp
           });
-          console.log('✅ Evento de áudio emitido com sucesso, mediaUrl:', mensagemSalva.media_url);
+          logger.info('✅ Evento de áudio emitido com sucesso, mediaUrl:', mensagemSalva.media_url);
         }
       } catch (socketError) {
-        console.error('❌ Erro ao emitir via Socket.IO:', socketError);
+        logger.error('❌ Erro ao emitir via Socket.IO:', socketError);
       }
       
       return res.status(201).json(mensagemSalva);
     }
 
     // Fallback caso não encontre (não deveria acontecer)
-    console.error('❌ Mensagem de áudio não encontrada no banco após envio');
+    logger.error('❌ Mensagem de áudio não encontrada no banco após envio');
     const duracaoSegundos = parseInt(duracao || '0', 10);
     const minutos = Math.floor(duracaoSegundos / 60);
     const segundos = duracaoSegundos % 60;
@@ -375,7 +376,7 @@ export const enviarAudio = async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Erro ao enviar áudio:', error);
+    logger.error('Erro ao enviar áudio:', error);
     res.status(500).json({ error: 'Erro ao enviar áudio' });
   }
 };

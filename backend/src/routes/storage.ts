@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { cleanupService } from '../services/cleanupService';
+import { logger } from './config/logger';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     
     res.json(response);
   } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
+    logger.error('Erro ao obter estatísticas:', error);
     res.status(500).json({ error: 'Erro ao obter estatísticas de armazenamento' });
   }
 });
@@ -54,7 +55,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
  */
 router.post('/cleanup', authMiddleware, async (req, res) => {
   try {
-    console.log('🧹 Limpeza manual iniciada pelo usuário:', req.user?.id);
+    logger.info('🧹 Limpeza manual iniciada pelo usuário:', req.user?.id);
     const result = await cleanupService.limparArquivosAntigos();
     
     const response = {
@@ -70,7 +71,7 @@ router.post('/cleanup', authMiddleware, async (req, res) => {
     
     res.json(response);
   } catch (error) {
-    console.error('Erro ao executar limpeza:', error);
+    logger.error('Erro ao executar limpeza:', error);
     res.status(500).json({ error: 'Erro ao executar limpeza de arquivos' });
   }
 });

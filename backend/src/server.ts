@@ -4,9 +4,11 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
+import rateLimit from 'express-rate-limit';
 import { pool } from './config/database';
 import { whatsappService } from './services/whatsappService';
 import { cleanupService } from './services/cleanupService';
+import { logger } from './config/logger';
 
 // Rotas
 import authRoutes from './routes/auth';
@@ -45,7 +47,7 @@ const httpServer = createServer(app);
 const pingTimeout = 55000 + Math.floor(Math.random() * 15000); // 55-70s (não sempre 60s)
 const pingInterval = 20000 + Math.floor(Math.random() * 10000); // 20-30s (não sempre 25s)
 
-console.log(`🔌 Socket.IO: pingTimeout=${Math.round(pingTimeout/1000)}s, pingInterval=${Math.round(pingInterval/1000)}s`);
+logger.info(`🔌 Socket.IO: pingTimeout=${Math.round(pingTimeout/1000)}s, pingInterval=${Math.round(pingInterval/1000)}s`);
 
 const io = new Server(httpServer, {
   cors: {
@@ -78,6 +80,46 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// 🛡️ RATE LIMITING - Proteção contra brute force e DDoS
+// Limiter geral para todas as rotas da API
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // 100 requisições por IP
+  message: { error: 'Muitas requisições, tente novamente mais tarde' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Rate limit excedido para IP: ${req.ip}`);
+    res.status(429).json({ error: 'Muitas requisições, tente novamente mais tarde' });
+  }
+});
+
+// Limiter mais restritivo para rotas de autenticação (login)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // apenas 5 tentativas de login
+  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Não contar requisições bem-sucedidas
+  handler: (req, res) => {
+    logger.warn(`Tentativas de login excedidas para IP: ${req.ip}`);
+    res.status(429).json({ 
+      error: 'Muitas tentativas de login. Tente novamente em 15 minutos',
+      retryAfter: 900 // 15 minutos em segundos
+    });
+  }
+});
+
+// Aplicar rate limiting
+app.use('/api/', apiLimiter); // Todas as rotas da API
+app.use('/api/auth/login', authLimiter); // Login mais restritivo
+app.use('/api/indicador/login', authLimiter); // Login de indicador também
+
+logger.info('🛡️ Rate limiting ativado:');
+logger.info('   • API geral: 100 req/15min');
+logger.info('   • Login: 5 tentativas/15min');
 
 // Servir arquivos estáticos da pasta uploads com headers CORS personalizados
 // process.cwd() já aponta para a pasta backend quando o servidor está rodando
@@ -112,8 +154,8 @@ app.use('/uploads', (req, res, next) => {
   
   next();
 }, express.static(uploadsPath));
-console.log('📁 Pasta uploads disponível em /uploads com CORS');
-console.log('📂 Caminho absoluto dos uploads:', uploadsPath);
+logger.info('📁 Pasta uploads disponível em /uploads com CORS');
+logger.info('📂 Caminho absoluto dos uploads:', uploadsPath);
 
 // Disponibilizar Socket.IO para os controllers
 app.set('io', io);
@@ -126,36 +168,36 @@ const consultorSockets = new Map<string, string>(); // socketId -> consultorId
 
 // Socket.IO - Conexões em tempo real
 io.on('connection', (socket) => {
-  console.log('🔌 Cliente conectado:', socket.id);
+  logger.info('🔌 Cliente conectado:', socket.id);
 
   // Consultor se junta a uma room específica
   socket.on('join_consultor', (consultorId: string) => {
     socket.join(`consultor_${consultorId}`);
     consultorSockets.set(socket.id, consultorId);
-    console.log(`👤 Consultor ${consultorId} entrou na room (socket: ${socket.id})`);
+    logger.info(`👤 Consultor ${consultorId} entrou na room (socket: ${socket.id})`);
   });
 
   // Admin se junta a uma room de admins
   socket.on('join_admin', (adminId: string) => {
     socket.join('admins');
-    console.log(`👔 Admin ${adminId} entrou na room de admins`);
+    logger.info(`👔 Admin ${adminId} entrou na room de admins`);
   });
 
   // Indicador se junta a uma room específica
   socket.on('join_indicador', (indicadorId: string) => {
     socket.join(`indicador_${indicadorId}`);
-    console.log(`💰 Indicador ${indicadorId} entrou na room (socket: ${socket.id})`);
+    logger.info(`💰 Indicador ${indicadorId} entrou na room (socket: ${socket.id})`);
   });
 
   // Consultor marca como online no sistema
   socket.on('consultor_online', async (consultorId: string) => {
     try {
       await pool.query('UPDATE consultores SET sistema_online = TRUE WHERE id = ?', [consultorId]);
-      console.log(`✅ Consultor ${consultorId} marcado como online no sistema`);
+      logger.info(`✅ Consultor ${consultorId} marcado como online no sistema`);
       // Notificar admins sobre mudança de status
       io.to('admins').emit('consultor_status_mudou', { consultorId, online: true });
     } catch (error) {
-      console.error('Erro ao marcar consultor como online:', error);
+      logger.error('Erro ao marcar consultor como online:', error);
     }
   });
 
@@ -164,7 +206,7 @@ io.on('connection', (socket) => {
     try {
       await pool.query('UPDATE consultores SET sistema_online = TRUE, ultimo_acesso = NOW() WHERE id = ?', [consultorId]);
     } catch (error) {
-      console.error('Erro no heartbeat do consultor:', error);
+      logger.error('Erro no heartbeat do consultor:', error);
     }
   });
 
@@ -172,27 +214,27 @@ io.on('connection', (socket) => {
   socket.on('consultor_offline', async (consultorId: string) => {
     try {
       await pool.query('UPDATE consultores SET sistema_online = FALSE WHERE id = ?', [consultorId]);
-      console.log(`📴 Consultor ${consultorId} marcado como offline no sistema`);
+      logger.info(`📴 Consultor ${consultorId} marcado como offline no sistema`);
       // Notificar admins sobre mudança de status
       io.to('admins').emit('consultor_status_mudou', { consultorId, online: false });
     } catch (error) {
-      console.error('Erro ao marcar consultor como offline:', error);
+      logger.error('Erro ao marcar consultor como offline:', error);
     }
   });
 
   socket.on('disconnect', async () => {
-    console.log('🔌 Cliente desconectado:', socket.id);
+    logger.info('🔌 Cliente desconectado:', socket.id);
     
     // Verificar se era um consultor e marcar como offline
     const consultorId = consultorSockets.get(socket.id);
     if (consultorId) {
       try {
         await pool.query('UPDATE consultores SET sistema_online = FALSE WHERE id = ?', [consultorId]);
-        console.log(`📴 Consultor ${consultorId} marcado como offline (fechou aba/navegador)`);
+        logger.info(`📴 Consultor ${consultorId} marcado como offline (fechou aba/navegador)`);
         io.to('admins').emit('consultor_status_mudou', { consultorId, online: false });
         consultorSockets.delete(socket.id);
       } catch (error) {
-        console.error('Erro ao marcar consultor como offline na desconexão:', error);
+        logger.error('Erro ao marcar consultor como offline na desconexão:', error);
       }
     }
   });
@@ -234,18 +276,18 @@ const start = async () => {
   try {
     // Testar conexão com banco
     await pool.query('SELECT NOW()');
-    console.log('✅ Banco de dados conectado');
+    logger.info('✅ Banco de dados conectado');
 
     httpServer.listen(PORT, () => {
-      console.log('');
-      console.log('🚀 ============================================');
-      console.log('🚀  VIP CRM Backend');
-      console.log('🚀 ============================================');
-      console.log(`🚀  Servidor rodando em: http://localhost:${PORT}`);
-      console.log(`🚀  API disponível em: http://localhost:${PORT}/api`);
-      console.log(`🚀  Socket.IO ativo`);
-      console.log('🚀 ============================================');
-      console.log('');
+      logger.info('');
+      logger.info('🚀 ============================================');
+      logger.info('🚀  VIP CRM Backend');
+      logger.info('🚀 ============================================');
+      logger.info(`🚀  Servidor rodando em: http://localhost:${PORT}`);
+      logger.info(`🚀  API disponível em: http://localhost:${PORT}/api`);
+      logger.info(`🚀  Socket.IO ativo`);
+      logger.info('🚀 ============================================');
+      logger.info('');
 
       // Iniciar limpeza automática de arquivos
       cleanupService.iniciarLimpezaAutomatica();
@@ -253,13 +295,13 @@ const start = async () => {
       // ✅ CORREÇÃO ERRO 5: Reconexão com randomização completa para evitar padrão de bot
       // Delay inicial aleatório: 30-90 segundos (não sempre 5s)
       const delayInicial = 30000 + Math.random() * 60000; // 30-90 segundos
-      console.log(`⏱️  Aguardando ${Math.round(delayInicial / 1000)}s antes de tentar reconexões automáticas`);
+      logger.info(`⏱️  Aguardando ${Math.round(delayInicial / 1000)}s antes de tentar reconexões automáticas`);
       
       setTimeout(async () => {
-        console.log('');
-        console.log('🔄 ============================================');
-        console.log('🔄  Reconectando Sessões do WhatsApp');
-        console.log('🔄 ============================================');
+        logger.info('');
+        logger.info('🔄 ============================================');
+        logger.info('🔄  Reconectando Sessões do WhatsApp');
+        logger.info('🔄 ============================================');
         
         try {
           const fs = require('fs');
@@ -271,7 +313,7 @@ const start = async () => {
           // Criar diretório se não existir
           if (!fs.existsSync(authSessionsPath)) {
             fs.mkdirSync(authSessionsPath, { recursive: true });
-            console.log('📁 Diretório auth_sessions criado');
+            logger.info('📁 Diretório auth_sessions criado');
           }
           
           const files = fs.readdirSync(authSessionsPath);
@@ -280,45 +322,45 @@ const start = async () => {
           );
 
           if (authFolders.length === 0) {
-            console.log('ℹ️  Nenhuma sessão salva encontrada');
-            console.log('🔄 ============================================');
-            console.log('');
+            logger.info('ℹ️  Nenhuma sessão salva encontrada');
+            logger.info('🔄 ============================================');
+            logger.info('');
             return;
           }
 
-          console.log(`📁 ${authFolders.length} sessão(ões) salva(s) encontrada(s)`);
-          console.log('');
+          logger.info(`📁 ${authFolders.length} sessão(ões) salva(s) encontrada(s)`);
+          logger.info('');
 
           // Para cada pasta de autenticação, tentar reconectar
           for (const folder of authFolders) {
             const consultorId = folder.replace('auth_', '');
-            console.log(`🔌 Tentando reconectar consultor: ${consultorId}`);
+            logger.info(`🔌 Tentando reconectar consultor: ${consultorId}`);
             
             try {
               await whatsappService.tryReconnectExistingSessions(consultorId);
-              console.log(`✅ Consultor ${consultorId} reconectado`);
+              logger.info(`✅ Consultor ${consultorId} reconectado`);
             } catch (error) {
-              console.log(`⚠️  Falha ao reconectar consultor ${consultorId}:`, (error as Error).message);
+              logger.info(`⚠️  Falha ao reconectar consultor ${consultorId}:`, (error as Error).message);
             }
             
             // ✅ CORREÇÃO ERRO 5: Delay aleatório entre reconexões (15-45 segundos)
             // Simula comportamento humano - não robótico
             const delayEntreReconexoes = 15000 + Math.random() * 30000; // 15-45 segundos
-            console.log(`⏱️  Aguardando ${Math.round(delayEntreReconexoes / 1000)}s antes da próxima reconexão`);
+            logger.info(`⏱️  Aguardando ${Math.round(delayEntreReconexoes / 1000)}s antes da próxima reconexão`);
             await new Promise(resolve => setTimeout(resolve, delayEntreReconexoes));
           }
 
-          console.log('');
-          console.log('✅ Processo de reconexão concluído');
-          console.log('🔄 ============================================');
-          console.log('');
+          logger.info('');
+          logger.info('✅ Processo de reconexão concluído');
+          logger.info('🔄 ============================================');
+          logger.info('');
         } catch (error) {
-          console.error('❌ Erro ao reconectar sessões:', error);
+          logger.error('❌ Erro ao reconectar sessões:', error);
         }
       }, delayInicial);
     });
   } catch (error) {
-    console.error('❌ Erro ao iniciar servidor:', error);
+    logger.error('❌ Erro ao iniciar servidor:', error);
     process.exit(1);
   }
 };

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { RowDataPacket } from 'mysql2';
+import { logger } from './config/logger';
 
 // ============================================
 // AUDITORIA DE INDICAÇÕES
@@ -258,7 +259,7 @@ export const getTodasIndicacoes = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar auditoria de indicações:', error);
+    logger.error('Erro ao buscar auditoria de indicações:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar auditoria',
       message: 'Erro interno do servidor'
@@ -396,7 +397,7 @@ export const getIndicacaoDetalhada = async (req: Request, res: Response) => {
       }))
     });
   } catch (error) {
-    console.error('Erro ao buscar indicação detalhada:', error);
+    logger.error('Erro ao buscar indicação detalhada:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar indicação',
       message: 'Erro interno do servidor'
@@ -447,7 +448,7 @@ export const exportarAuditoria = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('Erro ao exportar auditoria:', error);
+    logger.error('Erro ao exportar auditoria:', error);
     res.status(500).json({ 
       error: 'Erro ao exportar',
       message: 'Erro interno do servidor'
@@ -536,7 +537,7 @@ export const getResumoIndicador = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar resumo do indicador:', error);
+    logger.error('Erro ao buscar resumo do indicador:', error);
     res.status(500).json({ 
       error: 'Erro ao buscar resumo',
       message: 'Erro interno do servidor'

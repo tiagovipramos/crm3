@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { logger } from './config/logger';
 
 dotenv.config();
 
@@ -20,10 +21,10 @@ export const pool = mysql.createPool({
 
 pool.getConnection()
   .then(() => {
-    console.log('✅ Conectado ao MySQL');
+    logger.info('✅ Conectado ao MySQL');
   })
   .catch((err) => {
-    console.error('❌ Erro no MySQL:', err.message);
+    logger.error('❌ Erro no MySQL:', err.message);
   });
 
 export default pool;

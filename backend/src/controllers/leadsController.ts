@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
+import { logger } from '../config/logger';
 
 // Função para normalizar telefone para WhatsApp
 // Remove o 9º dígito após o DDD (números novos brasileiros)
@@ -7,8 +8,8 @@ const normalizarTelefoneParaWhatsApp = (telefone: string): string => {
   // Remove tudo que não é número
   const apenasNumeros = telefone.replace(/\D/g, '');
   
-  console.log('📱 Normalizando telefone:', telefone);
-  console.log('📱 Apenas números:', apenasNumeros);
+  logger.info('📱 Normalizando telefone:', telefone);
+  logger.info('📱 Apenas números:', apenasNumeros);
   
   // Se tem 13 dígitos (55 + DDD com 2 dígitos + 9 + 8 dígitos)
   // Exemplo: 5581987780566
@@ -21,12 +22,12 @@ const normalizarTelefoneParaWhatsApp = (telefone: string): string => {
     // Se o quinto dígito é 9, remove ele
     if (nono === '9') {
       const numeroNormalizado = ddi + ddd + resto;
-      console.log('📱 Número normalizado (removeu 9):', numeroNormalizado);
+      logger.info('📱 Número normalizado (removeu 9):', numeroNormalizado);
       return numeroNormalizado;
     }
   }
   
-  console.log('📱 Número mantido sem alteração:', apenasNumeros);
+  logger.info('📱 Número mantido sem alteração:', apenasNumeros);
   return apenasNumeros;
 };
 
@@ -54,25 +55,55 @@ const toCamelCase = (obj: any) => {
 export const getLeads = async (req: Request, res: Response) => {
   try {
     const consultorId = req.user?.id;
+    
+    // Paginação
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
 
-    console.log('📥 Carregando leads do consultor:', consultorId);
+    logger.info('📥 Carregando leads do consultor:', consultorId);
+    logger.info('📄 Paginação:', { page, limit, offset });
 
+    // Buscar leads com paginação
     const [rows] = await pool.query(
       `SELECT * FROM leads 
        WHERE consultor_id = ? 
-       ORDER BY data_criacao DESC`,
+       ORDER BY data_criacao DESC
+       LIMIT ? OFFSET ?`,
+      [consultorId, limit, offset]
+    );
+
+    // Contar total de leads
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) as total FROM leads WHERE consultor_id = ?',
       [consultorId]
     );
 
     const leadsArray = rows as any[];
-    console.log('📊 Total de leads encontrados:', leadsArray.length);
-    console.log('📋 Status dos leads:', leadsArray.map((l: any) => ({ id: l.id, nome: l.nome, status: l.status })));
+    const total = (countRows as any[])[0].total;
+    const totalPages = Math.ceil(total / limit);
+    
+    logger.info('📊 Total de leads:', total);
+    logger.info('📄 Página atual:', page, 'de', totalPages);
+    logger.info('📋 Leads nesta página:', leadsArray.length);
 
     // Converter para camelCase
     const leads = leadsArray.map(toCamelCase);
-    res.json(leads);
+    
+    // Retornar com informações de paginação
+    res.json({
+      leads,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
-    console.error('Erro ao buscar leads:', error);
+    logger.error('Erro ao buscar leads:', error);
     res.status(500).json({ error: 'Erro ao buscar leads' });
   }
 };
@@ -94,7 +125,7 @@ export const getLead = async (req: Request, res: Response) => {
 
     res.json(toCamelCase(leadsArray[0]));
   } catch (error) {
-    console.error('Erro ao buscar lead:', error);
+    logger.error('Erro ao buscar lead:', error);
     res.status(500).json({ error: 'Erro ao buscar lead' });
   }
 };
@@ -148,7 +179,7 @@ export const createLead = async (req: Request, res: Response) => {
     
     res.status(201).json(toCamelCase((leadRows as any[])[0]));
   } catch (error) {
-    console.error('Erro ao criar lead:', error);
+    logger.error('Erro ao criar lead:', error);
     res.status(500).json({ error: 'Erro ao criar lead' });
   }
 };
@@ -159,12 +190,12 @@ export const updateLead = async (req: Request, res: Response) => {
     const consultorId = req.user?.id;
     const updates = req.body;
 
-    console.log('');
-    console.log('================================================');
-    console.log('🔄 ATUALIZANDO LEAD:', id);
-    console.log('================================================');
-    console.log('📝 Dados recebidos do frontend:', JSON.stringify(updates, null, 2));
-    console.log('📊 Campos recebidos:', Object.keys(updates));
+    logger.info('');
+    logger.info('================================================');
+    logger.info('🔄 ATUALIZANDO LEAD:', id);
+    logger.info('================================================');
+    logger.info('📝 Dados recebidos do frontend:', JSON.stringify(updates, null, 2));
+    logger.info('📊 Campos recebidos:', Object.keys(updates));
 
     // Buscar configurações de comissão do banco
     const [comissaoRows] = await pool.query(
@@ -182,7 +213,7 @@ export const updateLead = async (req: Request, res: Response) => {
     );
 
     if ((checkRows as any[]).length === 0) {
-      console.log('❌ Lead não encontrado');
+      logger.info('❌ Lead não encontrado');
       return res.status(404).json({ error: 'Lead não encontrado' });
     }
 
@@ -209,8 +240,8 @@ export const updateLead = async (req: Request, res: Response) => {
       .map((field) => `${field.replace(/([A-Z])/g, '_$1').toLowerCase()} = ?`)
       .join(', ');
 
-    console.log('📝 Query SQL:', `UPDATE leads SET ${setClause}, data_atualizacao = NOW() WHERE id = ?`);
-    console.log('📊 Valores:', [...values, id]);
+    logger.info('📝 Query SQL:', `UPDATE leads SET ${setClause}, data_atualizacao = NOW() WHERE id = ?`);
+    logger.info('📊 Valores:', [...values, id]);
 
     await pool.query(
       `UPDATE leads 
@@ -219,15 +250,15 @@ export const updateLead = async (req: Request, res: Response) => {
       [...values, id]
     );
 
-    console.log('✅ Lead atualizado no banco de dados');
+    logger.info('✅ Lead atualizado no banco de dados');
 
     // 🎯 SISTEMA DE COMISSÕES AUTOMÁTICAS PARA INDICADORES
-    console.log('🔍 [DEBUG] Verificando se status foi alterado...');
-    console.log('🔍 [DEBUG] fields:', fields);
-    console.log('🔍 [DEBUG] fields.includes("status"):', fields.includes('status'));
+    logger.info('🔍 [DEBUG] Verificando se status foi alterado...');
+    logger.info('🔍 [DEBUG] fields:', fields);
+    logger.info('🔍 [DEBUG] fields.includes("status"):', fields.includes('status'));
     
     if (fields.includes('status')) {
-      console.log('💰 Status alterado! Verificando comissões do indicador...');
+      logger.info('💰 Status alterado! Verificando comissões do indicador...');
       
       // Buscar se o lead tem indicador
       const [leadIndicadorRows] = await pool.query(
@@ -238,7 +269,7 @@ export const updateLead = async (req: Request, res: Response) => {
       const leadComIndicador = (leadIndicadorRows as any[])[0];
       
       if (leadComIndicador?.indicador_id) {
-        console.log('✅ Lead tem indicador:', leadComIndicador.indicador_id);
+        logger.info('✅ Lead tem indicador:', leadComIndicador.indicador_id);
         
         // Buscar a indicação relacionada
         const [indicacaoRows] = await pool.query(
@@ -249,14 +280,14 @@ export const updateLead = async (req: Request, res: Response) => {
         const indicacao = (indicacaoRows as any[])[0];
         
         if (indicacao) {
-          console.log('✅ Indicação encontrada:', indicacao.id, 'Status atual:', indicacao.status);
+          logger.info('✅ Indicação encontrada:', indicacao.id, 'Status atual:', indicacao.status);
           
           const novoStatus = updates.status;
           const indicadorId = leadComIndicador.indicador_id;
           
           // Aplicar regras de comissão baseadas no status
           if ((novoStatus === 'primeiro_contato' || novoStatus === 'proposta_enviada') && indicacao.status === 'enviado_crm') {
-            console.log(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} bloqueados (primeiro contato/proposta enviada)`);
+            logger.info(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} bloqueados (primeiro contato/proposta enviada)`);
             
             // Liberar saldo bloqueado
             await pool.query(
@@ -289,10 +320,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
-            console.log('✅ Comissão de resposta liberada com sucesso!');
+            logger.info('✅ Comissão de resposta liberada com sucesso!');
             
           } else if (novoStatus === 'convertido' && indicacao.status === 'enviado_crm') {
-            console.log(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} E adicionando R$ ${comissaoVenda.toFixed(2)} (direto para convertido)`);
+            logger.info(`💰 Liberando R$ ${comissaoResposta.toFixed(2)} E adicionando R$ ${comissaoVenda.toFixed(2)} (direto para convertido)`);
             
             // Liberar comissão de resposta bloqueada E adicionar comissão de venda
             await pool.query(
@@ -329,10 +360,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoTotal, comissaoTotal, comissaoResposta, comissaoVenda, indicadorId]
             );
             
-            console.log(`✅ Comissão completa adicionada! R$ ${comissaoTotal.toFixed(2)} total`);
+            logger.info(`✅ Comissão completa adicionada! R$ ${comissaoTotal.toFixed(2)} total`);
             
           } else if (novoStatus === 'convertido' && indicacao.status === 'respondeu') {
-            console.log(`💰 Adicionando R$ ${comissaoVenda.toFixed(2)} de comissão de venda`);
+            logger.info(`💰 Adicionando R$ ${comissaoVenda.toFixed(2)} de comissão de venda`);
             
             // Adicionar comissão de venda
             await pool.query(
@@ -365,10 +396,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoVenda, comissaoVenda, indicadorId]
             );
             
-            console.log('✅ Comissão de venda adicionada com sucesso!');
+            logger.info('✅ Comissão de venda adicionada com sucesso!');
             
           } else if (indicacao.status === 'converteu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
-            console.log(`🔄 Reversão COMPLETA - Removendo R$ ${comissaoVenda.toFixed(2)} E bloqueando R$ ${comissaoResposta.toFixed(2)}`);
+            logger.info(`🔄 Reversão COMPLETA - Removendo R$ ${comissaoVenda.toFixed(2)} E bloqueando R$ ${comissaoResposta.toFixed(2)}`);
             
             // Remover comissão de venda E bloquear comissão de resposta
             await pool.query(
@@ -405,10 +436,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoTotal, comissaoTotal, comissaoVenda, comissaoResposta, indicadorId]
             );
             
-            console.log(`✅ Reversão completa! R$ ${comissaoVenda.toFixed(2)} removidos + R$ ${comissaoResposta.toFixed(2)} bloqueados`);
+            logger.info(`✅ Reversão completa! R$ ${comissaoVenda.toFixed(2)} removidos + R$ ${comissaoResposta.toFixed(2)} bloqueados`);
             
           } else if (indicacao.status === 'converteu' && novoStatus !== 'convertido') {
-            console.log(`🔄 Revertendo venda - Removendo R$ ${comissaoVenda.toFixed(2)} de comissão`);
+            logger.info(`🔄 Revertendo venda - Removendo R$ ${comissaoVenda.toFixed(2)} de comissão`);
             
             // Remover comissão de venda
             await pool.query(
@@ -441,10 +472,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoVenda, comissaoVenda, novoStatus, indicadorId]
             );
             
-            console.log(`✅ Venda revertida com sucesso! R$ ${comissaoVenda.toFixed(2)} removidos`);
+            logger.info(`✅ Venda revertida com sucesso! R$ ${comissaoVenda.toFixed(2)} removidos`);
             
           } else if (indicacao.status === 'respondeu' && (novoStatus === 'novo' || novoStatus === 'indicacao')) {
-            console.log(`🔄 Revertendo liberação dos R$ ${comissaoResposta.toFixed(2)} - Bloqueando novamente`);
+            logger.info(`🔄 Revertendo liberação dos R$ ${comissaoResposta.toFixed(2)} - Bloqueando novamente`);
             
             // Bloquear saldo novamente
             await pool.query(
@@ -477,10 +508,10 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
-            console.log(`✅ R$ ${comissaoResposta.toFixed(2)} bloqueados novamente!`);
+            logger.info(`✅ R$ ${comissaoResposta.toFixed(2)} bloqueados novamente!`);
             
           } else if (novoStatus === 'perdido' && indicacao.status === 'enviado_crm') {
-            console.log(`❌ Movendo R$ ${comissaoResposta.toFixed(2)} para saldo perdido`);
+            logger.info(`❌ Movendo R$ ${comissaoResposta.toFixed(2)} para saldo perdido`);
             
             // Mover saldo bloqueado para perdido
             await pool.query(
@@ -510,13 +541,13 @@ export const updateLead = async (req: Request, res: Response) => {
               [indicadorId, indicacao.id, comissaoResposta, comissaoResposta, indicadorId]
             );
             
-            console.log('✅ Saldo movido para perdido');
+            logger.info('✅ Saldo movido para perdido');
           }
           
           // Emitir Socket.IO para o indicador atualizar em tempo real
           const io = (req.app as any).get('io');
           if (io) {
-            console.log('📡 Emitindo evento para indicador atualizar saldo');
+            logger.info('📡 Emitindo evento para indicador atualizar saldo');
             io.to(`indicador_${indicadorId}`).emit('saldo_atualizado', {
               indicadorId,
               leadId: id,
@@ -526,26 +557,26 @@ export const updateLead = async (req: Request, res: Response) => {
           }
         }
       } else {
-        console.log('ℹ️ Lead não tem indicador (lead manual)');
+        logger.info('ℹ️ Lead não tem indicador (lead manual)');
       }
     }
 
     // Se o status foi atualizado, emitir evento Socket.IO para admins
     if (fields.includes('status')) {
       const io = (req.app as any).get('io');
-      console.log('🔍 DEBUG: Status foi atualizado! io existe?', !!io);
+      logger.info('🔍 DEBUG: Status foi atualizado! io existe?', !!io);
       if (io) {
-        console.log('📡 Emitindo evento lead_status_atualizado para admins');
-        console.log('� Dados do evento:', { leadId: id, consultorId, status: updates.status });
+        logger.info('📡 Emitindo evento lead_status_atualizado para admins');
+        logger.info('� Dados do evento:', { leadId: id, consultorId, status: updates.status });
         io.to('admins').emit('lead_status_atualizado', {
           leadId: id,
           consultorId,
           status: updates.status,
           timestamp: new Date().toISOString()
         });
-        console.log('✅ Evento emitido com sucesso!');
+        logger.info('✅ Evento emitido com sucesso!');
       } else {
-        console.error('❌ Socket.IO não encontrado no app!');
+        logger.error('❌ Socket.IO não encontrado no app!');
       }
     }
 
@@ -557,8 +588,8 @@ export const updateLead = async (req: Request, res: Response) => {
 
     res.json(toCamelCase((updatedRows as any[])[0]));
   } catch (error) {
-    console.error('❌ Erro ao atualizar lead:', error);
-    console.error('❌ Detalhes do erro:', error);
+    logger.error('❌ Erro ao atualizar lead:', error);
+    logger.error('❌ Detalhes do erro:', error);
     res.status(500).json({ 
       error: 'Erro ao atualizar lead',
       details: (error as Error).message 
@@ -582,7 +613,7 @@ export const deleteLead = async (req: Request, res: Response) => {
 
     res.json({ message: 'Lead deletado com sucesso' });
   } catch (error) {
-    console.error('Erro ao deletar lead:', error);
+    logger.error('Erro ao deletar lead:', error);
     res.status(500).json({ error: 'Erro ao deletar lead' });
   }
 };
@@ -626,7 +657,7 @@ export const addTag = async (req: Request, res: Response) => {
     const [updatedTagRows] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
     res.json(toCamelCase((updatedTagRows as any[])[0]));
   } catch (error) {
-    console.error('Erro ao adicionar tag:', error);
+    logger.error('Erro ao adicionar tag:', error);
     res.status(500).json({ error: 'Erro ao adicionar tag' });
   }
 };
@@ -659,7 +690,7 @@ export const removeTag = async (req: Request, res: Response) => {
     const [updatedRemoveTagRows] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
     res.json(toCamelCase((updatedRemoveTagRows as any[])[0]));
   } catch (error) {
-    console.error('Erro ao remover tag:', error);
+    logger.error('Erro ao remover tag:', error);
     res.status(500).json({ error: 'Erro ao remover tag' });
   }
 };
@@ -670,7 +701,7 @@ export const updateStatus = async (req: Request, res: Response) => {
     const { status } = req.body;
     const consultorId = req.user?.id;
 
-    console.log('🔄 Atualizando status do lead:', id, 'para:', status);
+    logger.info('🔄 Atualizando status do lead:', id, 'para:', status);
 
     if (!status) {
       return res.status(400).json({ error: 'Status é obrigatório' });
@@ -689,7 +720,7 @@ export const updateStatus = async (req: Request, res: Response) => {
     );
 
     if ((statusCheckRows as any[]).length === 0) {
-      console.log('❌ Lead não encontrado');
+      logger.info('❌ Lead não encontrado');
       return res.status(404).json({ error: 'Lead não encontrado' });
     }
 
@@ -700,30 +731,30 @@ export const updateStatus = async (req: Request, res: Response) => {
       [status, id]
     );
 
-    console.log('✅ Status atualizado com sucesso');
+    logger.info('✅ Status atualizado com sucesso');
 
     // Emitir evento Socket.IO para admins atualizarem em tempo real
     const io = (req.app as any).get('io');
-    console.log('🔍 DEBUG: io existe?', !!io);
+    logger.info('🔍 DEBUG: io existe?', !!io);
     if (io) {
-      console.log('📡 Emitindo evento lead_status_atualizado para admins');
-      console.log('📊 Dados do evento:', { leadId: id, consultorId, status });
+      logger.info('📡 Emitindo evento lead_status_atualizado para admins');
+      logger.info('📊 Dados do evento:', { leadId: id, consultorId, status });
       io.to('admins').emit('lead_status_atualizado', {
         leadId: id,
         consultorId,
         status,
         timestamp: new Date().toISOString()
       });
-      console.log('✅ Evento emitido com sucesso!');
+      logger.info('✅ Evento emitido com sucesso!');
     } else {
-      console.error('❌ Socket.IO não encontrado no app!');
+      logger.error('❌ Socket.IO não encontrado no app!');
     }
 
     // Buscar lead atualizado
     const [statusUpdatedRows] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
     res.json(toCamelCase((statusUpdatedRows as any[])[0]));
   } catch (error) {
-    console.error('❌ Erro ao atualizar status:', error);
+    logger.error('❌ Erro ao atualizar status:', error);
     res.status(500).json({ error: 'Erro ao atualizar status' });
   }
 };

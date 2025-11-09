@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { whatsappService } from '../services/whatsappService';
+import { logger } from './config/logger';
 
 export const conectar = async (req: Request, res: Response) => {
   try {
@@ -22,7 +23,7 @@ export const conectar = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('Erro ao conectar WhatsApp:', error);
+    logger.error('Erro ao conectar WhatsApp:', error);
     res.status(500).json({ error: 'Erro ao conectar WhatsApp' });
   }
 };
@@ -39,7 +40,7 @@ export const desconectar = async (req: Request, res: Response) => {
 
     res.json({ message: 'WhatsApp desconectado com sucesso' });
   } catch (error) {
-    console.error('Erro ao desconectar WhatsApp:', error);
+    logger.error('Erro ao desconectar WhatsApp:', error);
     res.status(500).json({ error: 'Erro ao desconectar WhatsApp' });
   }
 };
@@ -56,7 +57,7 @@ export const getStatus = async (req: Request, res: Response) => {
 
     res.json(status);
   } catch (error) {
-    console.error('Erro ao buscar status:', error);
+    logger.error('Erro ao buscar status:', error);
     res.status(500).json({ error: 'Erro ao buscar status' });
   }
 };

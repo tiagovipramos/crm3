@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { whatsappService } from '../services/whatsappService';
 import pool from '../config/database';
+import { logger } from './config/logger';
 
 // Configurar multer para upload de arquivos
 const storage = multer.diskStorage({
@@ -46,7 +47,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
   if (extname || mimetypeValid) {
     cb(null, true);
   } else {
-    console.error('❌ Tipo de arquivo rejeitado:', {
+    logger.error('❌ Tipo de arquivo rejeitado:', {
       originalname: file.originalname,
       mimetype: file.mimetype,
       extname: path.extname(file.originalname)
@@ -83,7 +84,7 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Lead ID é obrigatório' });
     }
 
-    console.log('📤 Upload de arquivo recebido:', {
+    logger.info('📤 Upload de arquivo recebido:', {
       filename: file.filename,
       originalname: file.originalname,
       mimetype: file.mimetype,
@@ -124,10 +125,10 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
     // Enviar arquivo via WhatsApp (já salva no banco dentro do whatsappService)
     await whatsappService.enviarArquivo(consultorId, telefone, filePath, tipoMensagem as any, caption || file.originalname);
 
-    console.log('✅ Arquivo enviado via WhatsApp e salvo no banco');
+    logger.info('✅ Arquivo enviado via WhatsApp e salvo no banco');
 
     // Buscar a mensagem recém-salva pelo whatsappService (usando o tipo mapeado do frontend)
-    console.log('🔍 Buscando mensagem de arquivo salva no banco...', { leadId, consultorId, tipoFrontend });
+    logger.info('🔍 Buscando mensagem de arquivo salva no banco...', { leadId, consultorId, tipoFrontend });
     const [mensagemRows] = await pool.query(
       `SELECT * FROM mensagens 
        WHERE lead_id = ? AND consultor_id = ? AND tipo = ? AND remetente = 'consultor'
@@ -140,9 +141,9 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
     
     if (mensagemRows.length > 0) {
       mensagemSalva = mensagemRows[0];
-      console.log('✅ Mensagem de arquivo encontrada no banco:', mensagemSalva.id);
+      logger.info('✅ Mensagem de arquivo encontrada no banco:', mensagemSalva.id);
     } else {
-      console.error('❌ Mensagem de arquivo não encontrada no banco após envio');
+      logger.error('❌ Mensagem de arquivo não encontrada no banco após envio');
       // Criar fallback
       const mediaUrl = `/uploads/${file.filename}`;
       let conteudo = '';
@@ -178,7 +179,7 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
     // ✅ EMITIR via Socket.IO com evento correto (nova_mensagem)
     const io = (req as any).app.get('io');
     if (io) {
-      console.log('📡 Emitindo nova_mensagem (arquivo) via Socket.IO para consultor:', consultorId);
+      logger.info('📡 Emitindo nova_mensagem (arquivo) via Socket.IO para consultor:', consultorId);
       io.to(`consultor_${consultorId}`).emit('nova_mensagem', {
         id: mensagemSalva.id,
         leadId: mensagemSalva.lead_id,
@@ -191,11 +192,11 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
         mediaName: mensagemSalva.media_name,
         timestamp: mensagemSalva.timestamp
       });
-      console.log('✅ Evento de arquivo emitido com sucesso, mediaUrl:', mensagemSalva.media_url);
+      logger.info('✅ Evento de arquivo emitido com sucesso, mediaUrl:', mensagemSalva.media_url);
     }
 
     // NÃO deletar o arquivo, pois ele precisa ficar disponível para visualização
-    console.log('📁 Arquivo mantido em:', mensagemSalva.media_url);
+    logger.info('📁 Arquivo mantido em:', mensagemSalva.media_url);
 
     res.json({
       success: true,
@@ -208,7 +209,7 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro ao fazer upload e enviar arquivo:', error);
+    logger.error('❌ Erro ao fazer upload e enviar arquivo:', error);
     
     // Deletar arquivo em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {

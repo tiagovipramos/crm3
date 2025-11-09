@@ -1,4 +1,5 @@
 import { whatsappService } from './whatsappService';
+import { logger } from './config/logger';
 
 export interface ValidacaoWhatsAppResult {
   telefone: string;
@@ -44,7 +45,7 @@ class WhatsAppValidationService {
         // Se o terceiro dígito após o 55 for "9", remover
         if (nono === '9' && resto.length === 8) {
           numeroFormatado = '55' + ddd + resto;
-          console.log(`🔄 Número convertido de 11 para 10 dígitos: ${numeroFormatado}`);
+          logger.info(`🔄 Número convertido de 11 para 10 dígitos: ${numeroFormatado}`);
         }
       }
 
@@ -93,12 +94,12 @@ class WhatsAppValidationService {
         const sock = await this.obterSocketAtivo(consultorId);
         
         if (sock) {
-          console.log(`🔍 Verificando se ${numeroFormatado} tem WhatsApp...`);
+          logger.info(`🔍 Verificando se ${numeroFormatado} tem WhatsApp...`);
           
           // Usar método onWhatsApp do Baileys para verificar se número existe
           const [resultado] = await sock.onWhatsApp(numeroFormatado);
           
-          console.log('📋 Resultado da verificação Baileys:', resultado);
+          logger.info('📋 Resultado da verificação Baileys:', resultado);
           
           if (resultado && resultado.exists) {
             // ⚠️ AVISO: Baileys pode dar falso positivo, então informamos isso
@@ -126,7 +127,7 @@ class WhatsAppValidationService {
           };
         }
       } catch (error) {
-        console.error('❌ Erro ao validar WhatsApp:', error);
+        logger.error('❌ Erro ao validar WhatsApp:', error);
         
         // Em caso de erro, retornar formato válido mas não confirmado
         return {
@@ -137,7 +138,7 @@ class WhatsAppValidationService {
         };
       }
     } catch (error) {
-      console.error('❌ Erro na validação:', error);
+      logger.error('❌ Erro na validação:', error);
       return {
         telefone,
         valido: false,
@@ -238,7 +239,7 @@ class WhatsAppValidationService {
       // Se não tem consultorId ou não está conectado, tentar buscar qualquer sessão ativa
       return whatsappService.getAnyActiveSocket();
     } catch (error) {
-      console.error('Erro ao obter socket:', error);
+      logger.error('Erro ao obter socket:', error);
       return null;
     }
   }
