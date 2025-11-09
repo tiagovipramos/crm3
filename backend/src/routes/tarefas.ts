@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import {
 import { logger } from '../config/logger';
+import {
   getTarefas,
   getTarefasByLead,
   createTarefa,
