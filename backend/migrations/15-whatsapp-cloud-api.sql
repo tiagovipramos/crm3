@@ -1,20 +1,33 @@
--- Migration para suportar WhatsApp Business Cloud API
--- Adiciona colunas necessárias para armazenar credenciais da API oficial
+-- ============================================
+-- Migration 15: WhatsApp Business Cloud API
+-- Data: 14/11/2025
+-- Descrição: Adiciona colunas para suportar API oficial do WhatsApp
+-- ============================================
 
--- Adicionar colunas para configuração da Cloud API na tabela consultores
-ALTER TABLE consultores
-ADD COLUMN IF NOT EXISTS whatsapp_access_token TEXT NULL COMMENT 'Token de acesso da WhatsApp Cloud API',
-ADD COLUMN IF NOT EXISTS whatsapp_phone_number_id VARCHAR(50) NULL COMMENT 'ID do número de telefone da WhatsApp Cloud API',
-ADD COLUMN IF NOT EXISTS whatsapp_business_account_id VARCHAR(50) NULL COMMENT 'ID da conta business do WhatsApp',
-ADD COLUMN IF NOT EXISTS whatsapp_webhook_verify_token VARCHAR(255) NULL COMMENT 'Token de verificação do webhook';
+-- Adicionar coluna para Access Token da Cloud API
+ALTER TABLE consultores 
+ADD COLUMN whatsapp_access_token TEXT NULL COMMENT 'Token de acesso da WhatsApp Cloud API'
+AFTER status_conexao;
 
--- Adicionar índices para melhor performance
-ALTER TABLE consultores
-ADD INDEX IF NOT EXISTS idx_whatsapp_phone_number_id (whatsapp_phone_number_id);
+-- Adicionar coluna para Phone Number ID
+ALTER TABLE consultores 
+ADD COLUMN whatsapp_phone_number_id VARCHAR(50) NULL COMMENT 'ID do número de telefone da WhatsApp Cloud API'
+AFTER whatsapp_access_token;
 
--- Comentários das colunas
-ALTER TABLE consultores
-MODIFY COLUMN status_conexao ENUM('offline', 'connecting', 'online') DEFAULT 'offline' COMMENT 'Status da conexão WhatsApp (usado tanto para Baileys quanto Cloud API)';
+-- Adicionar coluna para Business Account ID
+ALTER TABLE consultores 
+ADD COLUMN whatsapp_business_account_id VARCHAR(50) NULL COMMENT 'ID da conta business do WhatsApp'
+AFTER whatsapp_phone_number_id;
+
+-- Adicionar coluna para Webhook Verify Token
+ALTER TABLE consultores 
+ADD COLUMN whatsapp_webhook_verify_token VARCHAR(255) NULL COMMENT 'Token de verificação do webhook'
+AFTER whatsapp_business_account_id;
+
+-- Criar índice para melhorar performance nas buscas por Phone Number ID
+CREATE INDEX idx_whatsapp_phone_number_id 
+ON consultores(whatsapp_phone_number_id);
 
 -- Log da migration
-SELECT 'Migration 15: WhatsApp Cloud API columns added successfully!' as message;
+SELECT '✅ Migration 15 aplicada com sucesso!' as status;
+SELECT 'Colunas WhatsApp Cloud API adicionadas na tabela consultores' as mensagem;
