@@ -10,7 +10,7 @@ import {
 import { useAdminStore } from '@/store/useAdminStore';
 import MensagensPredefinidasPanel from '@/components/admin/MensagensPredefinidasPanel';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function ConfiguracoesAdminView() {
   // Pegar o token do store
