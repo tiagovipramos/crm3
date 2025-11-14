@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { whatsappService } from '../services/whatsappService';
+import { whatsappCloudService } from '../services/whatsappCloudService';
 import path from 'path';
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
@@ -123,9 +124,23 @@ export const enviarMensagem = async (req: Request, res: Response) => {
 
     const telefone = leadArray[0].telefone;
 
-    // Enviar via WhatsApp (já salva no banco dentro do whatsappService)
+    // ✅ DETECTAR qual serviço usar: Cloud API ou Baileys
+    const useCloudApi = await whatsappCloudService.isConnected(consultorId!);
+    
+    // Enviar via WhatsApp (já salva no banco dentro do serviço)
     try {
-      await whatsappService.enviarMensagem(consultorId!, telefone, conteudo);
+      if (useCloudApi) {
+        logger.info('📤 Usando WhatsApp Cloud API');
+        await whatsappCloudService.sendMessage({
+          to: telefone,
+          message: conteudo,
+          consultorId: consultorId!,
+          leadId
+        });
+      } else {
+        logger.info('📤 Usando Baileys (API não oficial)');
+        await whatsappService.enviarMensagem(consultorId!, telefone, conteudo, leadId);
+      }
       logger.info('📤 Mensagem enviada via WhatsApp e salva no banco');
     } catch (whatsappError: any) {
       logger.error('⚠️ Erro ao enviar via WhatsApp:', whatsappError.message);
@@ -306,9 +321,26 @@ export const enviarAudio = async (req: Request, res: Response) => {
 
     logger.info('📤 Preparando para enviar áudio via WhatsApp...', { consultorId, telefone, audioPath });
     
-    // Enviar áudio via WhatsApp (já salva no banco dentro do whatsappService)
+    // ✅ DETECTAR qual serviço usar: Cloud API ou Baileys
+    const useCloudApi2 = await whatsappCloudService.isConnected(consultorId!);
+    
+    // Enviar áudio via WhatsApp (já salva no banco dentro do serviço)
     try {
-      await whatsappService.enviarArquivo(consultorId!, telefone, audioPath, 'audio');
+      if (useCloudApi2) {
+        logger.info('📤 Usando WhatsApp Cloud API para áudio');
+        // Para Cloud API, precisa da URL pública do arquivo
+        const publicUrl = `${process.env.PUBLIC_URL || 'http://localhost:3001'}/uploads/audios/${audioName}`;
+        await whatsappCloudService.sendMedia({
+          to: telefone,
+          type: 'audio',
+          mediaUrl: publicUrl,
+          consultorId: consultorId!,
+          leadId
+        });
+      } else {
+        logger.info('📤 Usando Baileys (API não oficial) para áudio');
+        await whatsappService.enviarArquivo(consultorId!, telefone, audioPath, 'audio');
+      }
       logger.info('✅ Áudio enviado via WhatsApp e salvo no banco');
     } catch (whatsappError: any) {
       logger.error('⚠️ Erro ao enviar áudio via WhatsApp:', whatsappError);

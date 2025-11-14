@@ -146,7 +146,7 @@ export const mensagensAPI = {
   },
 };
 
-// WhatsApp
+// WhatsApp (Baileys - API não oficial)
 export const whatsappAPI = {
   connect: async () => {
     const { data } = await api.post('/whatsapp/connect');
@@ -160,6 +160,29 @@ export const whatsappAPI = {
 
   getStatus: async () => {
     const { data } = await api.get('/whatsapp/status');
+    return data;
+  },
+};
+
+// WhatsApp Cloud API (API Oficial)
+export const whatsappCloudAPI = {
+  saveConfig: async (config: {
+    accessToken: string;
+    phoneNumberId: string;
+    businessAccountId?: string;
+    webhookVerifyToken?: string;
+  }) => {
+    const { data } = await api.post('/whatsapp-cloud/config', config);
+    return data;
+  },
+
+  removeConfig: async () => {
+    const { data } = await api.delete('/whatsapp-cloud/config');
+    return data;
+  },
+
+  getStatus: async () => {
+    const { data } = await api.get('/whatsapp-cloud/status');
     return data;
   },
 };

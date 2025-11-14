@@ -7,6 +7,7 @@ import path from 'path';
 import rateLimit from 'express-rate-limit';
 import { pool } from './config/database';
 import { whatsappService } from './services/whatsappService';
+import { whatsappCloudService } from './services/whatsappCloudService';
 import { cleanupService } from './services/cleanupService';
 import { logger } from './config/logger';
 
@@ -15,6 +16,7 @@ import authRoutes from './routes/auth';
 import leadsRoutes from './routes/leads';
 import mensagensRoutes from './routes/mensagens';
 import whatsappRoutes from './routes/whatsapp';
+import whatsappCloudRoutes from './routes/whatsappCloud';
 import relatoriosRoutes from './routes/relatorios';
 import tarefasRoutes from './routes/tarefas';
 import storageRoutes from './routes/storage';
@@ -207,8 +209,9 @@ logger.info('📂 Caminho absoluto dos uploads:', uploadsPath);
 // Disponibilizar Socket.IO para os controllers
 app.set('io', io);
 
-// Configurar Socket.IO no WhatsApp Service
+// Configurar Socket.IO nos WhatsApp Services
 whatsappService.setSocketIO(io);
+whatsappCloudService.setSocketIO(io);
 
 // Map para rastrear consultores por socket
 const consultorSockets = new Map<string, string>(); // socketId -> consultorId
@@ -292,6 +295,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/mensagens', mensagensRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/tarefas', tarefasRoutes);
 app.use('/api/storage', storageRoutes);
