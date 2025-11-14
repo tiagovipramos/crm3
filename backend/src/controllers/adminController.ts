@@ -853,16 +853,19 @@ export const criarIndicador = async (req: Request, res: Response) => {
 
       const senhaHash = await bcrypt.hash(senha, 10);
       
-      const [result]: any = await connection.query(
-        `INSERT INTO indicadores (nome, email, senha, telefone, cpf, created_by) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [nome, email, senhaHash, telefone, cpf, createdBy]
+      // Gerar UUID manualmente
+      const indicadorId = crypto.randomUUID();
+      
+      await connection.query(
+        `INSERT INTO indicadores (id, nome, email, senha, telefone, cpf, created_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [indicadorId, nome, email, senhaHash, telefone, cpf, createdBy]
       );
       
       connection.release();
       
       res.status(201).json({
-        id: result.insertId,
+        id: indicadorId,
         nome,
         email,
         telefone,
