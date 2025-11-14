@@ -12,10 +12,16 @@ const api = axios.create({
 
 // Interceptor para adicionar token em todas as requisições
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // NÃO adicionar token na rota de login para evitar problemas com tokens expirados
+  const isLoginRoute = config.url?.includes('/auth/login') || config.url?.includes('/indicador/login');
+  
+  if (!isLoginRoute) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
+  
   return config;
 });
 
@@ -24,9 +30,17 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token inválido ou expirado
-      localStorage.removeItem('token');
-      window.location.href = '/';
+      // Token inválido ou expirado - apenas remover token, não redirecionar automaticamente
+      // para evitar loop durante o login
+      const isLoginRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/indicador/login');
+      
+      if (!isLoginRoute) {
+        localStorage.removeItem('token');
+        // Redirecionar apenas se não estiver na página de login
+        if (!window.location.pathname.includes('/login') && window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -35,6 +49,9 @@ api.interceptors.response.use(
 // Auth
 export const authAPI = {
   login: async (email: string, senha: string) => {
+    // Limpar token anterior antes de fazer login
+    localStorage.removeItem('token');
+    
     const { data } = await api.post('/auth/login', { email, senha });
     if (data.token) {
       localStorage.setItem('token', data.token);
