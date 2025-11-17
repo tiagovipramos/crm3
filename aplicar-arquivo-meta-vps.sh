@@ -17,19 +17,18 @@ PROJECT_DIR="/root/crm"
 echo -e "${YELLOW}1. Navegando para o diretório do projeto...${NC}"
 cd $PROJECT_DIR || exit 1
 
-echo -e "${YELLOW}2. Fazendo git pull para obter alterações...${NC}"
+echo -e "${YELLOW}2. Descartando alterações locais...${NC}"
+git reset --hard HEAD
+
+echo -e "${YELLOW}3. Fazendo git pull para obter a rota Meta...${NC}"
 git pull origin master
 
-echo -e "${YELLOW}3. Criando arquivo de verificação Meta em public/...${NC}"
-mkdir -p public
-echo "mryypl6j4u4onejl9jefuwj10ms4au" > public/mryypl6j4u4onejl9jefuwj10ms4au.html
-
-echo -e "${GREEN}✓ Arquivo criado: public/mryypl6j4u4onejl9jefuwj10ms4au.html${NC}"
+echo -e "${GREEN}✓ Rota Meta obtida: app/mryypl6j4u4onejl9jefuwj10ms4au.html/route.ts${NC}"
 
 echo -e "${YELLOW}4. Parando os containers...${NC}"
 docker-compose down
 
-echo -e "${YELLOW}5. Fazendo rebuild do frontend (necessário para incluir arquivo public)...${NC}"
+echo -e "${YELLOW}5. Fazendo rebuild do frontend (necessário para incluir a rota)...${NC}"
 docker-compose build frontend
 
 echo -e "${YELLOW}6. Iniciando os containers...${NC}"
