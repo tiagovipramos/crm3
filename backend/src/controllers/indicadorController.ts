@@ -3,8 +3,6 @@ import { IndicadorAuthRequest } from '../middleware/authIndicador';
 import { generateTokenIndicador } from '../middleware/authIndicador';
 import pool from '../config/database';
 import bcrypt from 'bcryptjs';
-import { whatsappValidationService } from '../services/whatsappValidationService';
-import { whatsappService } from '../services/whatsappService';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { logger } from '../config/logger';
 
@@ -385,8 +383,13 @@ export const validarWhatsApp = async (req: IndicadorAuthRequest, res: Response) 
       });
     }
 
-    // Validar usando o serviço
-    const resultado = await whatsappValidationService.validarComCache(telefone);
+    // TODO: Implementar validação com WhatsApp Cloud API
+    const resultado = {
+      valido: true,
+      existe: true,
+      telefone: telefone,
+      mensagem: 'Validação temporariamente desativada'
+    };
 
     res.json(resultado);
   } catch (error) {
@@ -414,15 +417,21 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
       });
     }
 
-    // Validar WhatsApp
-    const validacao = await whatsappValidationService.validarComCache(telefoneIndicado);
+    // Validar WhatsApp (TODO: Implementar com Cloud API)
+    const validacao = {
+      valido: true,
+      existe: true,
+      telefone: telefoneIndicado.replace(/\D/g, ''),
+      mensagem: 'Número válido'
+    };
+    // const validacao = await whatsappValidationService.validarComCache(telefoneIndicado);
 
-    if (!validacao.valido) {
-      return res.status(400).json({ 
-        error: 'Telefone inválido',
-        message: validacao.mensagem
-      });
-    }
+    // if (!validacao.valido) {
+    //   return res.status(400).json({ 
+    //     error: 'Telefone inválido',
+    //     message: validacao.mensagem
+    //   });
+    // }
 
     // ✅ VERIFICAR SE HÁ CONSULTORES COM WHATSAPP CONECTADO ANTES DE CRIAR A INDICAÇÃO
     logger.info('🔍 Verificando se há consultores com WhatsApp conectado...');
@@ -648,16 +657,11 @@ export const criarIndicacao = async (req: IndicadorAuthRequest, res: Response) =
               logger.info(`📝 Mensagem: ${mensagemBoasVindas}`);
               logger.info(`🆔 Lead ID para associar a mensagem: ${leadId}`);
               
-              // ✅ Passar o lead_id específico para garantir que a mensagem seja associada corretamente
-              // MANTÉM todos os delays e lógicas de segurança do whatsappService
-              await whatsappService.enviarMensagem(
-                consultorId,
-                validacao.telefone,
-                mensagemBoasVindas,
-                String(leadId)
-              );
+              // TODO: Implementar envio com WhatsApp Cloud API
+              logger.warn('⚠️ Envio de mensagem automática desativado temporariamente');
+              // await whatsappCloudService.enviarMensagem(consultorId, validacao.telefone, mensagemBoasVindas, String(leadId));
 
-              logger.info('✅ [BACKGROUND] Mensagem de boas-vindas enviada com sucesso!');
+              logger.info('ℹ️ [BACKGROUND] Mensagem de boas-vindas não enviada (funcionalidade desativada)');
             } catch (whatsappError) {
               logger.error('⚠️ [BACKGROUND] Erro ao enviar mensagem de boas-vindas:', whatsappError);
               logger.error('📋 Detalhes do erro:', {
