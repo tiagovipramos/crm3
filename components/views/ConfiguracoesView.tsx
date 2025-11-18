@@ -2,37 +2,23 @@
 
 import { useState } from 'react';
 import { useProtecarStore } from '@/store/useProtecarStore';
-import { Smartphone, LogOut, Cloud } from 'lucide-react';
-import WhatsAppQRModal from '@/components/WhatsAppQRModal';
+import { LogOut, Cloud } from 'lucide-react';
 import WhatsAppCloudConfig from '@/components/WhatsAppCloudConfig';
-import { whatsappAPI, whatsappCloudAPI } from '@/lib/api';
+import { whatsappCloudAPI } from '@/lib/api';
 
 export default function ConfiguracoesView() {
   const { consultorAtual } = useProtecarStore();
-  const [mostrarModalQR, setMostrarModalQR] = useState(false);
   const [mostrarCloudConfig, setMostrarCloudConfig] = useState(false);
   const [desconectando, setDesconectando] = useState(false);
 
   const handleDesconectar = async () => {
-    if (!confirm('Tem certeza que deseja desconectar o WhatsApp?\n\nVocê precisará escanear o QR Code novamente para reconectar.\n\nObs: O histórico de mensagens será mantido por 90 dias.')) {
+    if (!confirm('Tem certeza que deseja desconectar o WhatsApp?\n\nVocê precisará configurar novamente para reconectar.\n\nObs: O histórico de mensagens será mantido por 90 dias.')) {
       return;
     }
 
     setDesconectando(true);
     try {
-      // Tentar desconectar ambos os serviços
-      try {
-        await whatsappCloudAPI.removeConfig();
-      } catch (e) {
-        // Ignorar se não estiver usando Cloud API
-      }
-      
-      try {
-        await whatsappAPI.disconnect();
-      } catch (e) {
-        // Ignorar se não estiver usando Baileys
-      }
-      
+      await whatsappCloudAPI.removeConfig();
       alert('✅ WhatsApp desconectado com sucesso!');
       // Atualizar estado será feito pelo Socket.IO
     } catch (error: any) {
@@ -58,7 +44,6 @@ export default function ConfiguracoesView() {
 
   return (
     <>
-      <WhatsAppQRModal isOpen={mostrarModalQR} onClose={() => setMostrarModalQR(false)} />
       <WhatsAppCloudConfig 
         isOpen={mostrarCloudConfig} 
         onClose={() => setMostrarCloudConfig(false)}
@@ -71,11 +56,11 @@ export default function ConfiguracoesView() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center">
-                  <Smartphone className="w-6 h-6 text-white" />
+                  <Cloud className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Conexão WhatsApp</h3>
-                  <p className="text-sm text-gray-600">Conecte seu WhatsApp ao CRM</p>
+                  <h3 className="text-xl font-semibold text-gray-900">WhatsApp Cloud API</h3>
+                  <p className="text-sm text-gray-600">Configure a API oficial do WhatsApp Business</p>
                 </div>
               </div>
 
@@ -87,7 +72,7 @@ export default function ConfiguracoesView() {
                       <div>
                         <p className="font-medium text-gray-900">Conectado</p>
                         <p className="text-sm text-gray-600">
-                          WhatsApp ativo{consultorAtual.numeroWhatsapp ? ` 📱 ${consultorAtual.numeroWhatsapp}` : ''}
+                          WhatsApp Cloud API ativo{consultorAtual.numeroWhatsapp ? ` 📱 ${consultorAtual.numeroWhatsapp}` : ''}
                         </p>
                       </div>
                     </>
@@ -96,7 +81,7 @@ export default function ConfiguracoesView() {
                       <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                       <div>
                         <p className="font-medium text-gray-900">Desconectado</p>
-                        <p className="text-sm text-gray-600">Escolha uma opção abaixo para conectar</p>
+                        <p className="text-sm text-gray-600">Configure a API oficial abaixo</p>
                       </div>
                     </>
                   )}
@@ -123,42 +108,31 @@ export default function ConfiguracoesView() {
               </div>
 
               {consultorAtual?.statusConexao !== 'online' && (
-                <div className="space-y-3">
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <Cloud className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">API Oficial (Recomendado)</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Use a WhatsApp Business Cloud API oficial do Meta. Mais estável e profissional.
-                          Não requer QR Code, basta configurar o token.
-                        </p>
-                        <button
-                          onClick={() => setMostrarCloudConfig(true)}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center gap-2"
-                        >
-                          <Cloud className="w-4 h-4" />
-                          Configurar API Oficial
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <Smartphone className="w-6 h-6 text-gray-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">API Não Oficial</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Conecte escaneando QR Code (método antigo). Pode ser instável e está sujeito a bloqueios.
-                        </p>
-                        <button
-                          onClick={() => setMostrarModalQR(true)}
-                          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition flex items-center gap-2"
-                        >
-                          <Smartphone className="w-4 h-4" />
-                          Conectar com QR Code
-                        </button>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Cloud className="w-8 h-8 text-blue-600 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Configure a WhatsApp Cloud API</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Use a API oficial do WhatsApp Business da Meta. É mais estável, profissional e não requer QR Code.
+                        Basta obter suas credenciais no Facebook Developers e configurar aqui.
+                      </p>
+                      <button
+                        onClick={() => setMostrarCloudConfig(true)}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center gap-2"
+                      >
+                        <Cloud className="w-5 h-5" />
+                        Configurar API Oficial
+                      </button>
+                      <div className="mt-4 pt-4 border-t border-blue-200">
+                        <p className="text-xs text-gray-600 mb-2">📚 <strong>Como obter as credenciais:</strong></p>
+                        <ol className="text-xs text-gray-600 space-y-1 ml-4 list-decimal">
+                          <li>Acesse <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Facebook Developers</a></li>
+                          <li>Crie ou selecione seu App</li>
+                          <li>Adicione o produto "WhatsApp"</li>
+                          <li>Obtenha o <strong>Access Token</strong> e <strong>Phone Number ID</strong></li>
+                          <li>Cole as credenciais no botão acima</li>
+                        </ol>
                       </div>
                     </div>
                   </div>
