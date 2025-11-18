@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authAPI, leadsAPI, mensagensAPI, whatsappAPI } from '@/lib/api';
+import { authAPI, leadsAPI, mensagensAPI } from '@/lib/api';
 import type {
   Consultor,
   Lead,
@@ -227,110 +227,14 @@ export const useProtecarStore = create<ProtecarStore>((set, get) => ({
     });
   },
 
-  // WhatsApp
+  // WhatsApp - Conexão agora é feita via WhatsApp Cloud API (nas Configurações)
   conectarWhatsApp: async () => {
-    const { consultorAtual } = get();
-    if (!consultorAtual) {
-      console.error('❌ Erro: Consultor não autenticado');
-      return '';
-    }
-
-    console.log('🔄 Iniciando conexão WhatsApp...');
-    console.log('📋 Consultor ID:', consultorAtual.id);
-
-    try {
-      // Atualizar estado para "conectando"
-      set({
-        consultorAtual: {
-          ...consultorAtual,
-          statusConexao: 'connecting',
-          qrCode: undefined
-        }
-      });
-      console.log('⏳ Status atualizado para: connecting');
-
-      // Fazer chamada para o backend
-      console.log('📡 Fazendo requisição para /api/whatsapp/connect...');
-      const response = await whatsappAPI.connect();
-      console.log('✅ Resposta recebida do backend:', response);
-      
-      const { qrCode, message } = response;
-      
-      if (qrCode) {
-        console.log('📷 QR Code recebido do backend!');
-        console.log('📏 Tamanho do QR Code:', qrCode.length, 'caracteres');
-        console.log('🔤 Começa com:', qrCode.substring(0, 30) + '...');
-        
-        set({
-          consultorAtual: {
-            ...consultorAtual,
-            statusConexao: 'connecting',
-            qrCode
-          }
-        });
-        console.log('✅ QR Code salvo no estado!');
-        console.log('💡 Aguardando Socket.IO enviar QR Code atualizado...');
-        return qrCode;
-      } else if (message && message.includes('conectado')) {
-        // Já estava conectado
-        console.log('✅ WhatsApp já estava conectado!');
-        set({
-          consultorAtual: {
-            ...consultorAtual,
-            statusConexao: 'online',
-            qrCode: undefined
-          }
-        });
-        return '';
-      }
-      
-      console.warn('⚠️ Resposta sem QR Code e sem mensagem de sucesso');
-      return '';
-    } catch (error: any) {
-      console.error('❌ ERRO ao conectar WhatsApp:', error);
-      console.error('📋 Detalhes do erro:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      
-      set({
-        consultorAtual: {
-          ...consultorAtual,
-          statusConexao: 'offline',
-          qrCode: undefined
-        }
-      });
-      
-      const errorMessage = error?.response?.data?.error || error.message || 'Erro desconhecido';
-      console.error('💬 Mensagem de erro:', errorMessage);
-      alert('Erro ao conectar WhatsApp: ' + errorMessage + '\n\nVerifique se o backend está rodando na porta 3001.');
-      return '';
-    }
+    console.log('⚠️ conectarWhatsApp() - Esta função não é mais usada. Use a configuração do WhatsApp Cloud API.');
+    return '';
   },
 
   desconectarWhatsApp: async () => {
-    const { consultorAtual } = get();
-    if (!consultorAtual) return;
-
-    console.log('🔴 Desconectando WhatsApp explicitamente...');
-    
-    try {
-      // Chamar API para desconectar no backend
-      await whatsappAPI.disconnect();
-      console.log('✅ WhatsApp desconectado no backend');
-      
-      set({
-        consultorAtual: {
-          ...consultorAtual,
-          statusConexao: 'offline',
-          sessaoWhatsapp: undefined,
-          qrCode: undefined
-        }
-      });
-    } catch (error) {
-      console.error('❌ Erro ao desconectar WhatsApp:', error);
-    }
+    console.log('⚠️ desconectarWhatsApp() - Esta função não é mais usada. Use a configuração do WhatsApp Cloud API.');
   },
 
   atualizarStatusConexao: (status) => {
