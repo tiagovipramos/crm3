@@ -163,25 +163,7 @@ export const mensagensAPI = {
   },
 };
 
-// WhatsApp (Baileys - API não oficial)
-export const whatsappAPI = {
-  connect: async () => {
-    const { data } = await api.post('/whatsapp/connect');
-    return data;
-  },
-
-  disconnect: async () => {
-    const { data } = await api.post('/whatsapp/disconnect');
-    return data;
-  },
-
-  getStatus: async () => {
-    const { data } = await api.get('/whatsapp/status');
-    return data;
-  },
-};
-
-// WhatsApp Cloud API (API Oficial)
+// WhatsApp Cloud API (API Oficial da Meta)
 export const whatsappCloudAPI = {
   saveConfig: async (config: {
     accessToken: string;
