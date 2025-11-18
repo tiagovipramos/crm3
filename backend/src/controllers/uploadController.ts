@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappCloudService } from '../services/whatsappCloudService';
 import pool from '../config/database';
 import { logger } from '../config/logger';
 
@@ -122,10 +122,35 @@ export const uploadAndSendFile = async (req: Request, res: Response) => {
       tipoFrontend = 'audio';
     }
 
-    // Enviar arquivo via WhatsApp (já salva no banco dentro do whatsappService)
-    await whatsappService.enviarArquivo(consultorId, telefone, filePath, tipoMensagem as any, caption || file.originalname);
+    // Enviar arquivo via WhatsApp Cloud API (implementar futuramente com upload de mídia)
+    // TODO: Implementar envio de arquivos via WhatsApp Cloud API
+    logger.warn('⚠️ Envio de arquivos via WhatsApp Cloud API ainda não implementado');
+    
+    // Salvar mensagem no banco manualmente
+    const mediaUrl = `/uploads/${file.filename}`;
+    let conteudo = '';
+    
+    switch (tipoFrontend) {
+      case 'imagem':
+        conteudo = '📷 Imagem';
+        break;
+      case 'video':
+        conteudo = '🎥 Vídeo';
+        break;
+      case 'audio':
+        conteudo = '🎤 Áudio';
+        break;
+      default:
+        conteudo = `📄 ${file.originalname}`;
+    }
+    
+    await pool.query(
+      `INSERT INTO mensagens (lead_id, consultor_id, conteudo, tipo, remetente, status, media_url, media_name, timestamp)
+       VALUES (?, ?, ?, ?, 'consultor', 'enviada', ?, ?, NOW())`,
+      [leadId, consultorId, conteudo, tipoFrontend, mediaUrl, file.originalname]
+    );
 
-    logger.info('✅ Arquivo enviado via WhatsApp e salvo no banco');
+    logger.info('✅ Arquivo salvo no banco');
 
     // Buscar a mensagem recém-salva pelo whatsappService (usando o tipo mapeado do frontend)
     logger.info('🔍 Buscando mensagem de arquivo salva no banco...', { leadId, consultorId, tipoFrontend });
