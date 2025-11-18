@@ -6,7 +6,6 @@ import { Server } from 'socket.io';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import { pool } from './config/database';
-import { whatsappService } from './services/whatsappService';
 import { whatsappCloudService } from './services/whatsappCloudService';
 import { cleanupService } from './services/cleanupService';
 import { logger } from './config/logger';
@@ -15,7 +14,6 @@ import { logger } from './config/logger';
 import authRoutes from './routes/auth';
 import leadsRoutes from './routes/leads';
 import mensagensRoutes from './routes/mensagens';
-import whatsappRoutes from './routes/whatsapp';
 import whatsappCloudRoutes from './routes/whatsappCloud';
 import relatoriosRoutes from './routes/relatorios';
 import tarefasRoutes from './routes/tarefas';
@@ -210,8 +208,7 @@ logger.info('📂 Caminho absoluto dos uploads:', uploadsPath);
 // Disponibilizar Socket.IO para os controllers
 app.set('io', io);
 
-// Configurar Socket.IO nos WhatsApp Services
-whatsappService.setSocketIO(io);
+// Configurar Socket.IO no WhatsApp Cloud Service
 whatsappCloudService.setSocketIO(io);
 
 // Map para rastrear consultores por socket
@@ -295,7 +292,6 @@ io.on('connection', (socket) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/mensagens', mensagensRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/tarefas', tarefasRoutes);
@@ -344,73 +340,8 @@ const start = async () => {
 
       // Iniciar limpeza automática de arquivos
       cleanupService.iniciarLimpezaAutomatica();
-
-      // ✅ CORREÇÃO ERRO 5: Reconexão com randomização completa para evitar padrão de bot
-      // Delay inicial aleatório: 30-90 segundos (não sempre 5s)
-      const delayInicial = 30000 + Math.random() * 60000; // 30-90 segundos
-      logger.info(`⏱️  Aguardando ${Math.round(delayInicial / 1000)}s antes de tentar reconexões automáticas`);
       
-      setTimeout(async () => {
-        logger.info('');
-        logger.info('🔄 ============================================');
-        logger.info('🔄  Reconectando Sessões do WhatsApp');
-        logger.info('🔄 ============================================');
-        
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          
-          // Buscar todas as pastas auth_* no diretório auth_sessions
-          const authSessionsPath = path.join(process.cwd(), 'auth_sessions');
-          
-          // Criar diretório se não existir
-          if (!fs.existsSync(authSessionsPath)) {
-            fs.mkdirSync(authSessionsPath, { recursive: true });
-            logger.info('📁 Diretório auth_sessions criado');
-          }
-          
-          const files = fs.readdirSync(authSessionsPath);
-          const authFolders = files.filter((file: string) => 
-            file.startsWith('auth_') && fs.statSync(path.join(authSessionsPath, file)).isDirectory()
-          );
-
-          if (authFolders.length === 0) {
-            logger.info('ℹ️  Nenhuma sessão salva encontrada');
-            logger.info('🔄 ============================================');
-            logger.info('');
-            return;
-          }
-
-          logger.info(`📁 ${authFolders.length} sessão(ões) salva(s) encontrada(s)`);
-          logger.info('');
-
-          // Para cada pasta de autenticação, tentar reconectar
-          for (const folder of authFolders) {
-            const consultorId = folder.replace('auth_', '');
-            logger.info(`🔌 Tentando reconectar consultor: ${consultorId}`);
-            
-            try {
-              await whatsappService.tryReconnectExistingSessions(consultorId);
-              logger.info(`✅ Consultor ${consultorId} reconectado`);
-            } catch (error) {
-              logger.info(`⚠️  Falha ao reconectar consultor ${consultorId}:`, (error as Error).message);
-            }
-            
-            // ✅ CORREÇÃO ERRO 5: Delay aleatório entre reconexões (15-45 segundos)
-            // Simula comportamento humano - não robótico
-            const delayEntreReconexoes = 15000 + Math.random() * 30000; // 15-45 segundos
-            logger.info(`⏱️  Aguardando ${Math.round(delayEntreReconexoes / 1000)}s antes da próxima reconexão`);
-            await new Promise(resolve => setTimeout(resolve, delayEntreReconexoes));
-          }
-
-          logger.info('');
-          logger.info('✅ Processo de reconexão concluído');
-          logger.info('🔄 ============================================');
-          logger.info('');
-        } catch (error) {
-          logger.error('❌ Erro ao reconectar sessões:', error);
-        }
-      }, delayInicial);
+      logger.info('✅ Sistema iniciado - Usando WhatsApp Cloud API oficial');
     });
   } catch (error) {
     logger.error('❌ Erro ao iniciar servidor:', error);
