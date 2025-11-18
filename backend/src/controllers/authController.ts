@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database';
-import { whatsappService } from '../services/whatsappService';
+import { whatsappCloudService } from '../services/whatsappCloudService';
 import { logger } from '../config/logger';
 
 export const login = async (req: Request, res: Response) => {
@@ -51,32 +51,9 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    // Verificar status real do WhatsApp
-    let statusWhatsapp = whatsappService.getStatus(consultor.id);
-    let statusConexao = 'offline';
-    
-    if (statusWhatsapp.connected) {
-      statusConexao = 'online';
-    } else if (statusWhatsapp.hasSession) {
-      statusConexao = 'connecting';
-    } else {
-      // Se não está conectado, tentar reconectar sessão existente
-      logger.info('🔍 Verificando se existe sessão salva para reconectar...');
-      const reconectado = await whatsappService.tryReconnectExistingSessions(consultor.id);
-      
-      if (reconectado) {
-        // Aguardar um momento para a conexão estabelecer
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Verificar novamente o status
-        statusWhatsapp = whatsappService.getStatus(consultor.id);
-        if (statusWhatsapp.connected) {
-          statusConexao = 'online';
-        } else {
-          statusConexao = 'connecting';
-        }
-      }
-    }
+    // Verificar status do WhatsApp Cloud API
+    const statusWhatsapp = await whatsappCloudService.getStatus(consultor.id);
+    const statusConexao = statusWhatsapp.connected ? 'online' : 'offline';
 
     // Atualizar status no banco
     await pool.query(
