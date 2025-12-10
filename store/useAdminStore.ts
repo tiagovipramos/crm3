@@ -262,18 +262,14 @@ export const useAdminStore = create<AdminState>()(
       // Vendedores
       getVendedoresPorHierarquia: () => {
         const { usuarioLogado, vendedores } = get();
-        console.log('getVendedoresPorHierarquia - usuarioLogado:', usuarioLogado);
-        console.log('getVendedoresPorHierarquia - vendedores no state:', vendedores);
         
         // Se não estiver logado, retorna todos os vendedores (para visualização sem filtro)
         if (!usuarioLogado) {
-          console.log('Usuário não logado, retornando todos:', vendedores);
           return Array.isArray(vendedores) ? vendedores : [];
         }
 
         // O BACKEND JÁ filtra os vendedores baseado no role e created_by
         // Então aqui só retornamos o que veio do backend
-        console.log('Retornando vendedores do backend (já filtrados):', vendedores);
         return Array.isArray(vendedores) ? vendedores : [];
       },
 
