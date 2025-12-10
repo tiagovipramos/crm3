@@ -8,8 +8,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_NAME:-protecar_crm}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123}
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: root123
     ports:
       - "3307:3306"
     volumes:
