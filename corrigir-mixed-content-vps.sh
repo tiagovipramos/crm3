@@ -47,9 +47,9 @@ server {
     listen 443 ssl http2;
     server_name api.boraindicar.com.br;
 
-    # Certificados SSL (Certbot irá adicionar)
-    # ssl_certificate /etc/letsencrypt/live/api.boraindicar.com.br/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/api.boraindicar.com.br/privkey.pem;
+    # Certificados SSL temporários (Certbot irá substituir)
+    ssl_certificate /etc/letsencrypt/live/boraindicar.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/boraindicar.com.br/privkey.pem;
 
     # Proxy para o backend
     location / {
